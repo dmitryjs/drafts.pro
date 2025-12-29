@@ -7,21 +7,49 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Edit2 } from "lucide-react";
 import { SiTelegram, SiBehance, SiDribbble } from "react-icons/si";
+import MainLayout from "@/components/layout/MainLayout";
 
 export default function Profile() {
+  const rightPanel = (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-semibold mb-3">Статистика</h3>
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Решено задач</span>
+            <span className="font-medium">12</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Батлов</span>
+            <span className="font-medium">3</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Уровень</span>
+            <span className="font-medium">Middle</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t pt-6">
+        <h3 className="font-semibold mb-3">Достижения</h3>
+        <p className="text-sm text-muted-foreground">Пока нет достижений</p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-background p-4">
+    <MainLayout rightPanel={rightPanel} title="Профиль" showCreateButton={false}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="max-w-md mx-auto space-y-8"
+        className="max-w-2xl space-y-8"
       >
-        <div className="flex flex-col items-center space-y-4 text-center">
+        <div className="flex items-start gap-6">
           <div className="relative">
             <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
               <AvatarImage src="" />
-              <AvatarFallback>ИП</AvatarFallback>
+              <AvatarFallback className="text-2xl bg-primary/10 text-primary">ИП</AvatarFallback>
             </Avatar>
             <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full h-8 w-8 shadow-md">
               <Edit2 className="h-3 w-3" />
@@ -30,18 +58,17 @@ export default function Profile() {
           <div>
             <h1 className="text-2xl font-bold">Иван Петров</h1>
             <p className="text-muted-foreground">Product Designer</p>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" className="rounded-full">
-              <SiTelegram className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="rounded-full">
-              <SiBehance className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="rounded-full">
-              <SiDribbble className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-2 mt-3">
+              <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                <SiTelegram className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                <SiBehance className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                <SiDribbble className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
         
@@ -52,48 +79,36 @@ export default function Profile() {
           
           <Card className="border-border/50">
             <CardContent className="p-6 space-y-4">
-              <div className="space-y-2">
-                <Label>Имя</Label>
-                <Input defaultValue="Иван Петров" />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input defaultValue="ivan@example.com" disabled />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Имя</Label>
+                  <Input defaultValue="Иван Петров" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input defaultValue="ivan@example.com" disabled />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>О себе</Label>
                 <Input defaultValue="Product Designer с 5-летним опытом" />
               </div>
-              <div className="space-y-2">
-                <Label>Компания</Label>
-                <Input defaultValue="Яндекс" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Компания</Label>
+                  <Input defaultValue="Яндекс" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Город</Label>
+                  <Input defaultValue="Москва" />
+                </div>
               </div>
               
-              <Button className="w-full mt-4">Сохранить</Button>
+              <Button className="w-full mt-4">Сохранить изменения</Button>
             </CardContent>
           </Card>
-          
-          <h2 className="font-semibold text-lg">Статистика</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-muted/30 border-none">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Решено задач</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">12</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-muted/30 border-none">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Батлов</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">3</div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </motion.div>
-    </div>
+    </MainLayout>
   );
 }

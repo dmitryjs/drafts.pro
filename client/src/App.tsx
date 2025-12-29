@@ -7,45 +7,31 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 
-import Home from "@/pages/Home";
+import Tasks from "@/pages/Tasks";
+import TaskDetail from "@/pages/TaskDetail";
 import Auth from "@/pages/Auth";
-import Dashboard from "@/pages/Dashboard";
+import Battles from "@/pages/Battles";
+import Assessment from "@/pages/Assessment";
+import Mentors from "@/pages/Mentors";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={Tasks} />
+      <Route path="/tasks" component={Tasks} />
+      <Route path="/tasks/:slug" component={TaskDetail} />
       <Route path="/auth" component={Auth} />
-      <Route path="/tasks">
-        {/* TODO: Tasks page */}
-        <Home />
-      </Route>
-      <Route path="/battles">
-        {/* TODO: Battles page */}
-        <Home />
-      </Route>
-      <Route path="/assessment">
-        {/* TODO: Assessment page */}
-        <Home />
-      </Route>
-      <Route path="/mentors">
-        {/* TODO: Mentors page */}
-        <Home />
-      </Route>
-      <Route path="/dashboard">
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/battles" component={Battles} />
+      <Route path="/assessment" component={Assessment} />
+      <Route path="/mentors" component={Mentors} />
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
         </ProtectedRoute>
       </Route>
       <Route path="/settings" component={Settings} />
-      
       <Route component={NotFound} />
     </Switch>
   );

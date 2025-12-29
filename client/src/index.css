@@ -1,74 +1,78 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Elegant, tech-focused color palette */
-  --font-display: 'Outfit', sans-serif;
-  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  --background: 220 30% 98%;
-  --foreground: 222 47% 11%;
+  /* Light theme - inspired by forhers.com (warm, clean, minimal) */
+  --background: 40 20% 98%;
+  --foreground: 20 15% 15%;
   
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
+  /* Primary - warm coral/terracotta accent */
+  --primary: 15 75% 55%;
+  --primary-foreground: 0 0% 100%;
+  --primary-border: hsl(15 75% 45%);
   
-  --secondary: 215 25% 95%;
-  --secondary-foreground: 222 47% 11%;
+  /* Secondary - soft neutral */
+  --secondary: 40 15% 94%;
+  --secondary-foreground: 20 15% 25%;
+  --secondary-border: hsl(40 15% 88%);
   
-  --muted: 215 25% 95%;
-  --muted-foreground: 215 16% 47%;
+  /* Muted - subtle backgrounds */
+  --muted: 40 12% 95%;
+  --muted-foreground: 20 10% 50%;
+  --muted-border: hsl(40 12% 88%);
   
-  --accent: 262 83% 58%;
-  --accent-foreground: 210 40% 98%;
+  /* Accent - soft green/teal for secondary actions */
+  --accent: 160 45% 45%;
+  --accent-foreground: 0 0% 100%;
+  --accent-border: hsl(160 45% 35%);
   
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  /* Destructive */
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --destructive-border: hsl(0 70% 40%);
 
+  /* Card - pure white */
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 20 15% 15%;
+  --card-border: hsl(40 15% 90%);
   
+  /* Popover */
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 20 15% 15%;
+  --popover-border: hsl(40 15% 88%);
   
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  /* Borders and inputs */
+  --border: 40 15% 88%;
+  --input: 40 15% 92%;
+  --ring: 15 75% 55%;
   
-  --radius: 0.75rem;
-}
+  --radius: 0.5rem;
 
-.dark {
-  --background: 222 47% 11%;
-  --foreground: 210 40% 98%;
-  
-  --primary: 217 91% 60%;
-  --primary-foreground: 222 47% 11%;
-  
-  --secondary: 217 33% 17%;
-  --secondary-foreground: 210 40% 98%;
-  
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  
-  --accent: 262 83% 65%;
-  --accent-foreground: 210 40% 98%;
-  
-  --destructive: 0 62% 30%;
-  --destructive-foreground: 210 40% 98%;
-  
-  --card: 222 47% 13%;
-  --card-foreground: 210 40% 98%;
-  
-  --popover: 222 47% 13%;
-  --popover-foreground: 210 40% 98%;
-  
-  --border: 217 33% 20%;
-  --input: 217 33% 20%;
-  --ring: 224 76% 48%;
+  /* Sidebar - slightly different background */
+  --sidebar: 40 18% 97%;
+  --sidebar-foreground: 20 15% 25%;
+  --sidebar-border: 40 15% 90%;
+  --sidebar-ring: 15 75% 55%;
+  --sidebar-primary: 15 75% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-border: hsl(15 75% 45%);
+  --sidebar-accent: 40 18% 93%;
+  --sidebar-accent-foreground: 20 15% 15%;
+  --sidebar-accent-border: hsl(40 18% 85%);
+
+  /* Charts */
+  --chart-1: 15 75% 55%;
+  --chart-2: 160 45% 45%;
+  --chart-3: 45 80% 55%;
+  --chart-4: 200 60% 50%;
+  --chart-5: 280 50% 55%;
 }
 
 @layer base {
@@ -95,9 +99,100 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
+  background: hsl(var(--muted-foreground) / 0.2);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* Elevation utilities for hover/active states */
+@layer utilities {
+  .hover-elevate {
+    @apply transition-all duration-150;
+    position: relative;
+  }
+  .hover-elevate::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: transparent;
+    transition: background 0.15s ease;
+    pointer-events: none;
+  }
+  .hover-elevate:hover::before {
+    background: hsl(var(--foreground) / 0.04);
+  }
+
+  .active-elevate-2 {
+    @apply transition-all duration-100;
+  }
+  .active-elevate-2:active {
+    transform: scale(0.98);
+  }
+  .active-elevate-2:active::before {
+    background: hsl(var(--foreground) / 0.08);
+  }
+
+  .toggle-elevate {
+    @apply transition-all duration-150;
+  }
+  .toggle-elevated {
+    background: hsl(var(--sidebar-accent));
+  }
+
+  .no-default-hover-elevate:hover::before {
+    background: transparent !important;
+  }
+  .no-default-active-elevate:active::before {
+    background: transparent !important;
+  }
+  .no-default-active-elevate:active {
+    transform: none !important;
+  }
+}
+
+/* Category badge colors */
+.category-product {
+  --badge-bg: 270 80% 95%;
+  --badge-text: 270 80% 40%;
+}
+.category-graphic {
+  --badge-bg: 45 90% 94%;
+  --badge-text: 45 80% 35%;
+}
+.category-uxui {
+  --badge-bg: 340 80% 95%;
+  --badge-text: 340 70% 45%;
+}
+.category-3d {
+  --badge-bg: 200 80% 94%;
+  --badge-text: 200 70% 40%;
+}
+.category-cases {
+  --badge-bg: 0 75% 94%;
+  --badge-text: 0 70% 45%;
+}
+
+/* Level badge colors */
+.level-intern {
+  --level-bg: 200 60% 94%;
+  --level-text: 200 60% 40%;
+}
+.level-junior {
+  --level-bg: 145 60% 94%;
+  --level-text: 145 60% 35%;
+}
+.level-middle {
+  --level-bg: 45 80% 94%;
+  --level-text: 45 70% 35%;
+}
+.level-senior {
+  --level-bg: 25 80% 94%;
+  --level-text: 25 70% 40%;
+}
+.level-lead {
+  --level-bg: 340 70% 94%;
+  --level-text: 340 60% 40%;
 }
