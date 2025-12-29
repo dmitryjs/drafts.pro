@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProblemSchema, insertSubmissionSchema, insertTrackSchema, insertUserSchema, problems, submissions, tracks, users } from './schema';
+import { insertProblemSchema, insertSubmissionSchema, insertTrackSchema, insertUserSchema, insertProfileSchema, problems, submissions, tracks, users, profiles } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -68,6 +68,28 @@ export const api = {
       input: insertSubmissionSchema,
       responses: {
         201: z.custom<typeof submissions.$inferSelect>(),
+      },
+    },
+  },
+  profiles: {
+    upsert: {
+      method: 'POST' as const,
+      path: '/api/profiles/upsert',
+      input: z.object({
+        authUid: z.string(),
+        email: z.string().email(),
+      }),
+      responses: {
+        200: z.custom<typeof profiles.$inferSelect>(),
+        201: z.custom<typeof profiles.$inferSelect>(),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/profiles/:authUid',
+      responses: {
+        200: z.custom<typeof profiles.$inferSelect>(),
+        404: errorSchemas.notFound,
       },
     },
   },

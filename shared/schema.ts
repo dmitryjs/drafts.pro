@@ -10,6 +10,15 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const profiles = pgTable("profiles", {
+  id: serial("id").primaryKey(),
+  authUid: text("auth_uid").notNull().unique(),
+  email: text("email").notNull(),
+  username: text("username"),
+  avatarUrl: text("avatar_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const tracks = pgTable("tracks", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -43,6 +52,7 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export const insertTrackSchema = createInsertSchema(tracks).omit({ id: true });
 export const insertProblemSchema = createInsertSchema(problems).omit({ id: true });
 export const insertSubmissionSchema = createInsertSchema(submissions).omit({ id: true, createdAt: true });
+export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, createdAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -50,3 +60,5 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Track = typeof tracks.$inferSelect;
 export type Problem = typeof problems.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
+export type Profile = typeof profiles.$inferSelect;
+export type InsertProfile = z.infer<typeof insertProfileSchema>;

@@ -1,10 +1,11 @@
 import { db } from "./db";
 import {
-  users, tracks, problems, submissions,
+  users, tracks, problems, submissions, profiles,
   type User, type InsertUser,
   type Track, type InsertTrack,
   type Problem, type InsertProblem,
-  type Submission, type InsertSubmission
+  type Submission, type InsertSubmission,
+  type Profile, type InsertProfile
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -26,6 +27,10 @@ export interface IStorage {
   // Submissions
   getSubmissions(userId?: number): Promise<Submission[]>;
   createSubmission(submission: InsertSubmission): Promise<Submission>;
+
+  // Profiles
+  getProfileByAuthUid(authUid: string): Promise<Profile | undefined>;
+  upsertProfile(authUid: string, email: string): Promise<Profile>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -99,6 +104,26 @@ export class DatabaseStorage implements IStorage {
   async createSubmission(submission: InsertSubmission): Promise<Submission> {
     const [newSubmission] = await db.insert(submissions).values(submission).returning();
     return newSubmission;
+  }
+
+  // Profiles
+  async getProfileByAuthUid(authUid: string): Promise<Profile | undefined> {
+    const [profile] = await db.select().from(profiles).where(eq(profiles.authUid, authUid));
+    return profile;
+  }
+
+  async upsertProfile(authUid: string, email: string): Promise<Profile> {
+    const existing = await this.getProfileByAuthUid(authUid);
+    if (existing) {
+      return existing;
+    }
+    const [newProfile] = await db.insert(profiles).values({
+      authUid,
+      email,
+      username: null,
+      avatarUrl: null,
+    }).returning();
+    return newProfile;
   }
 }
 

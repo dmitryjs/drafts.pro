@@ -122,5 +122,34 @@ export async function registerRoutes(
     }
   });
 
+  // Profiles
+  app.post(api.profiles.upsert.path, async (req, res) => {
+    try {
+      const input = api.profiles.upsert.input.parse(req.body);
+      const existingProfile = await storage.getProfileByAuthUid(input.authUid);
+      if (existingProfile) {
+        return res.status(200).json(existingProfile);
+      }
+      const profile = await storage.upsertProfile(input.authUid, input.email);
+      res.status(201).json(profile);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.get(api.profiles.get.path, async (req, res) => {
+    const profile = await storage.getProfileByAuthUid(req.params.authUid);
+    if (!profile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+    res.json(profile);
+  });
+
   return httpServer;
 }
