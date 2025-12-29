@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutGrid,
@@ -10,11 +10,11 @@ import {
   LogOut,
   LogIn,
   Plus,
-  Search
+  Bell,
+  ChevronDown
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import logoPath from "@assets/Logo_black_1767028620121.png";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -32,12 +33,14 @@ interface MainLayoutProps {
   title?: string;
   showCreateButton?: boolean;
   onCreateClick?: () => void;
+  onCreateTask?: () => void;
+  onCreateBattle?: () => void;
 }
 
 const navItems = [
   { href: "/", icon: LayoutGrid, label: "Задачи" },
   { href: "/battles", icon: Swords, label: "Батлы" },
-  { href: "/assessment", icon: BarChart3, label: "Оценка" },
+  { href: "/assessment", icon: BarChart3, label: "Оценка навыков" },
   { href: "/mentors", icon: Users, label: "Менторы" },
 ];
 
@@ -46,7 +49,9 @@ export default function MainLayout({
   rightPanel, 
   title,
   showCreateButton = true,
-  onCreateClick 
+  onCreateClick,
+  onCreateTask,
+  onCreateBattle
 }: MainLayoutProps) {
   const [location] = useLocation();
   const { user, profile, signOut, isConfigured, isLoading } = useAuth();
@@ -66,23 +71,55 @@ export default function MainLayout({
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left Sidebar */}
-      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-screen sticky top-0">
+    <div className="min-h-screen bg-[#F9F9F9] flex">
+      {/* Left Sidebar - 238px white */}
+      <aside className="w-[238px] bg-white border-r border-border flex flex-col h-screen sticky top-0">
         {/* Logo */}
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="h-14 px-4 flex items-center border-b border-border">
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-                D
-              </div>
-              <span className="font-display font-bold text-lg">Drafts</span>
-            </div>
+            <img 
+              src={logoPath} 
+              alt="Drafts" 
+              className="h-6 cursor-pointer"
+            />
           </Link>
         </div>
 
+        {/* Create button with dropdown */}
+        {showCreateButton && (
+          <div className="p-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-full justify-between" data-testid="button-create">
+                  <span className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Создать
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[200px]">
+                <DropdownMenuItem 
+                  className="cursor-pointer py-2.5"
+                  onClick={onCreateTask || onCreateClick}
+                >
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                  Задача
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="cursor-pointer py-2.5"
+                  onClick={onCreateBattle || onCreateClick}
+                >
+                  <Swords className="mr-2 h-4 w-4" />
+                  Батл
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 px-3 space-y-0.5">
           {navItems.map((item) => {
             const isActive = location === item.href || 
               (item.href === "/" && location === "/tasks");
@@ -92,15 +129,15 @@ export default function MainLayout({
               <Link key={item.href} href={item.href}>
                 <div
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors",
+                    "flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-sidebar-foreground hover-elevate"
+                      ? "bg-[#F4F4F5] text-foreground font-medium"
+                      : "text-muted-foreground hover:bg-[#F4F4F5] hover:text-foreground"
                   )}
-                  data-testid={`nav-${item.label.toLowerCase()}`}
+                  data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  <Icon className="h-5 w-5" strokeWidth={isActive ? 2 : 1.5} />
-                  <span className="text-sm">{item.label}</span>
+                  <Icon className="h-4 w-4" strokeWidth={1.5} />
+                  <span>{item.label}</span>
                 </div>
               </Link>
             );
@@ -108,16 +145,16 @@ export default function MainLayout({
         </nav>
 
         {/* User section */}
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-border">
           {isLoading ? (
-            <div className="h-10 bg-muted animate-pulse rounded-md" />
+            <div className="h-10 bg-muted animate-pulse rounded-lg" />
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover-elevate">
+                <div className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-[#F4F4F5] transition-colors">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={profile?.avatarUrl || undefined} />
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                    <AvatarFallback className="text-xs bg-muted text-muted-foreground">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
@@ -175,40 +212,80 @@ export default function MainLayout({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header */}
-        <header className="h-16 border-b border-border bg-background sticky top-0 z-40 flex items-center justify-between px-6 gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            {title && (
-              <h1 className="text-xl font-semibold font-display">{title}</h1>
-            )}
-            <div className="relative max-w-md flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Поиск задач..."
-                className="pl-9 bg-muted/50 border-0"
-                data-testid="input-search"
-              />
-            </div>
-          </div>
+        {/* Header - white background */}
+        <header className="h-14 border-b border-border bg-white sticky top-0 z-40 flex items-center justify-end px-4 gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="text-muted-foreground hover:text-foreground"
+            data-testid="button-notifications"
+          >
+            <Bell className="h-5 w-5" />
+          </Button>
           
-          {showCreateButton && (
-            <Button onClick={onCreateClick} data-testid="button-create-task">
-              <Plus className="mr-2 h-4 w-4" />
-              Создать задачу
-            </Button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full"
+                data-testid="button-avatar"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={profile?.avatarUrl || undefined} />
+                  <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">
+                    {profile?.username || "Пользователь"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {user?.email || "Не авторизован"}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <Link href="/profile">
+                <DropdownMenuItem className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" /> Профиль
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/settings">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" /> Настройки
+                </DropdownMenuItem>
+              </Link>
+              {user && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Выйти
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         {/* Content */}
         <div className="flex-1 flex">
-          {/* Center Content */}
-          <main className="flex-1 p-6 overflow-auto">
+          {/* Center Content - F9F9F9 background */}
+          <main className="flex-1 p-6 overflow-auto bg-[#F9F9F9]">
             {children}
           </main>
 
-          {/* Right Panel */}
+          {/* Right Panel - white background */}
           {rightPanel && (
-            <aside className="w-80 border-l border-border bg-card p-6 overflow-auto hidden lg:block">
+            <aside className="w-80 border-l border-border bg-white p-6 overflow-auto hidden lg:block">
               {rightPanel}
             </aside>
           )}
