@@ -9,22 +9,31 @@ import NotFound from "@/pages/not-found";
 
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
-import Problems from "@/pages/Problems";
-import ProblemDetail from "@/pages/ProblemDetail";
-import Tracks from "@/pages/Tracks";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
-import Submissions from "@/pages/Submissions";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/auth" component={Auth} />
-      <Route path="/problems" component={Problems} />
-      <Route path="/problems/:slug" component={ProblemDetail} />
-      <Route path="/tracks" component={Tracks} />
+      <Route path="/tasks">
+        {/* TODO: Tasks page */}
+        <Home />
+      </Route>
+      <Route path="/battles">
+        {/* TODO: Battles page */}
+        <Home />
+      </Route>
+      <Route path="/assessment">
+        {/* TODO: Assessment page */}
+        <Home />
+      </Route>
+      <Route path="/mentors">
+        {/* TODO: Mentors page */}
+        <Home />
+      </Route>
       <Route path="/dashboard">
         <ProtectedRoute>
           <Dashboard />
@@ -33,11 +42,6 @@ function Router() {
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/submissions">
-        <ProtectedRoute>
-          <Submissions />
         </ProtectedRoute>
       </Route>
       <Route path="/settings" component={Settings} />

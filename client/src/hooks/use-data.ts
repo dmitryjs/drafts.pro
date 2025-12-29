@@ -1,7 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
-import { insertSubmissionSchema } from "@shared/schema";
-import { mockTracks, mockProblems, mockSubmissions } from "@/lib/mock";
 import { z } from "zod";
 
 // --- Health Check ---
@@ -14,129 +12,131 @@ export function useHealth() {
         if (!res.ok) throw new Error("Health check failed");
         return api.health.check.responses[200].parse(await res.json());
       } catch (e) {
-        // Fallback or just re-throw depending on desired behavior. 
-        // For health, we usually want to know if it's down.
         return null;
       }
     },
-    // Don't refetch aggressively
     refetchInterval: 30000 
   });
 }
 
-// --- Tracks ---
-export function useTracks() {
+// --- Tasks (Задачи) ---
+export function useTasks(filters?: { category?: string; level?: string }) {
   return useQuery({
-    queryKey: [api.tracks.list.path],
+    queryKey: [api.tasks.list.path, filters],
     queryFn: async () => {
-      try {
-        const res = await fetch(api.tracks.list.path);
-        if (!res.ok) throw new Error("Failed to fetch tracks");
-        return api.tracks.list.responses[200].parse(await res.json());
-      } catch (e) {
-        console.warn("API failed, using mock data for tracks");
-        return mockTracks;
-      }
-    },
-  });
-}
-
-// --- Problems ---
-export function useProblems(filters?: { trackId?: number; difficulty?: string }) {
-  return useQuery({
-    queryKey: [api.problems.list.path, filters],
-    queryFn: async () => {
-      try {
-        // Build query string manually or use URLSearchParams
-        const params = new URLSearchParams();
-        if (filters?.trackId) params.append("trackId", String(filters.trackId));
-        if (filters?.difficulty && filters.difficulty !== "All") params.append("difficulty", filters.difficulty);
-        
-        const url = `${api.problems.list.path}?${params.toString()}`;
-        
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Failed to fetch problems");
-        return api.problems.list.responses[200].parse(await res.json());
-      } catch (e) {
-        console.warn("API failed, using mock data for problems");
-        let result = [...mockProblems];
-        if (filters?.trackId) {
-          result = result.filter(p => p.trackId === filters.trackId);
-        }
-        if (filters?.difficulty && filters.difficulty !== "All") {
-          result = result.filter(p => p.difficulty === filters.difficulty);
-        }
-        return result;
-      }
-    },
-  });
-}
-
-export function useProblem(slug: string) {
-  return useQuery({
-    queryKey: [api.problems.get.path, slug],
-    queryFn: async () => {
-      try {
-        const url = buildUrl(api.problems.get.path, { slug });
-        const res = await fetch(url);
-        if (res.status === 404) return null;
-        if (!res.ok) throw new Error("Failed to fetch problem");
-        return api.problems.get.responses[200].parse(await res.json());
-      } catch (e) {
-        console.warn("API failed, using mock data for problem detail");
-        return mockProblems.find(p => p.slug === slug) || null;
-      }
-    },
-  });
-}
-
-// --- Submissions ---
-export function useSubmissions() {
-  return useQuery({
-    queryKey: [api.submissions.list.path],
-    queryFn: async () => {
-      try {
-        const res = await fetch(api.submissions.list.path);
-        if (!res.ok) throw new Error("Failed to fetch submissions");
-        return api.submissions.list.responses[200].parse(await res.json());
-      } catch (e) {
-        console.warn("API failed, using mock data for submissions");
-        return mockSubmissions;
-      }
-    },
-  });
-}
-
-export function useCreateSubmission() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: z.infer<typeof insertSubmissionSchema>) => {
-      // Simulate network delay for effect
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const params = new URLSearchParams();
+      if (filters?.category) params.append("category", filters.category);
+      if (filters?.level) params.append("level", filters.level);
       
-      try {
-        const res = await fetch(api.submissions.create.path, {
-          method: api.submissions.create.method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) throw new Error("Failed to submit");
-        return api.submissions.create.responses[201].parse(await res.json());
-      } catch (e) {
-        console.warn("API failed, returning mock success for submission");
-        // Mock success return
-        return {
-          id: Math.random(),
-          userId: data.userId || 1,
-          problemId: data.problemId || 1,
-          code: data.code,
-          status: data.status,
-          createdAt: new Date()
-        };
-      }
+      const url = `${api.tasks.list.path}?${params.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch tasks");
+      return await res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.submissions.list.path] });
+  });
+}
+
+export function useTask(slug: string) {
+  return useQuery({
+    queryKey: [api.tasks.get.path, slug],
+    queryFn: async () => {
+      const url = buildUrl(api.tasks.get.path, { slug });
+      const res = await fetch(url);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Failed to fetch task");
+      return await res.json();
     },
+    enabled: !!slug,
+  });
+}
+
+// --- Battles (Дизайн батлы) ---
+export function useBattles(filters?: { status?: string; category?: string }) {
+  return useQuery({
+    queryKey: [api.battles.list.path, filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.status) params.append("status", filters.status);
+      if (filters?.category) params.append("category", filters.category);
+      
+      const url = `${api.battles.list.path}?${params.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch battles");
+      return await res.json();
+    },
+  });
+}
+
+export function useBattle(slug: string) {
+  return useQuery({
+    queryKey: [api.battles.get.path, slug],
+    queryFn: async () => {
+      const url = buildUrl(api.battles.get.path, { slug });
+      const res = await fetch(url);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Failed to fetch battle");
+      return await res.json();
+    },
+    enabled: !!slug,
+  });
+}
+
+// --- Mentors (Менторы) ---
+export function useMentors(filters?: { specialization?: string; isAvailable?: boolean }) {
+  return useQuery({
+    queryKey: [api.mentors.list.path, filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.specialization) params.append("specialization", filters.specialization);
+      if (filters?.isAvailable !== undefined) params.append("isAvailable", String(filters.isAvailable));
+      
+      const url = `${api.mentors.list.path}?${params.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch mentors");
+      return await res.json();
+    },
+  });
+}
+
+export function useMentor(slug: string) {
+  return useQuery({
+    queryKey: [api.mentors.get.path, slug],
+    queryFn: async () => {
+      const url = buildUrl(api.mentors.get.path, { slug });
+      const res = await fetch(url);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Failed to fetch mentor");
+      return await res.json();
+    },
+    enabled: !!slug,
+  });
+}
+
+// --- Skill Assessment (Оценка навыков) ---
+export function useAssessment(userId: number) {
+  return useQuery({
+    queryKey: [api.assessments.get.path, userId],
+    queryFn: async () => {
+      const url = buildUrl(api.assessments.get.path, { userId });
+      const res = await fetch(url);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Failed to fetch assessment");
+      return await res.json();
+    },
+    enabled: !!userId,
+  });
+}
+
+// --- Task Solutions (Решения) ---
+export function useUserSolutions(userId: number) {
+  return useQuery({
+    queryKey: [api.taskSolutions.listByUser.path, userId],
+    queryFn: async () => {
+      const url = buildUrl(api.taskSolutions.listByUser.path, { userId });
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch solutions");
+      return await res.json();
+    },
+    enabled: !!userId,
   });
 }
