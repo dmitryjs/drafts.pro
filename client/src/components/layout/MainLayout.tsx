@@ -86,8 +86,8 @@ export default function MainLayout({
           </Link>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 space-y-0.5">
+        {/* Navigation - 32px spacing from header */}
+        <nav className="flex-1 px-3 pt-8 space-y-0.5">
           {navItems.map((item) => {
             const isActive = location === item.href || 
               (item.href === "/" && location === "/tasks");
@@ -104,7 +104,7 @@ export default function MainLayout({
                   )}
                   data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  <Icon className="h-4 w-4" fill="currentColor" strokeWidth={0} />
+                  <Icon className="h-4 w-4" />
                   <span>{item.label}</span>
                 </div>
               </Link>
@@ -187,7 +187,7 @@ export default function MainLayout({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="gap-2" data-testid="button-create">
-                  <Plus className="h-4 w-4" fill="currentColor" />
+                  <Plus className="h-4 w-4" />
                   Создать
                   <ChevronDown className="h-4 w-4" />
                 </Button>
@@ -197,14 +197,14 @@ export default function MainLayout({
                   className="cursor-pointer py-2.5"
                   onClick={onCreateTask || onCreateClick}
                 >
-                  <LayoutGrid className="mr-2 h-4 w-4" fill="currentColor" />
+                  <LayoutGrid className="mr-2 h-4 w-4" />
                   Задача
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   className="cursor-pointer py-2.5"
                   onClick={onCreateBattle || onCreateClick}
                 >
-                  <Swords className="mr-2 h-4 w-4" fill="currentColor" />
+                  <Swords className="mr-2 h-4 w-4" />
                   Батл
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -217,7 +217,7 @@ export default function MainLayout({
             className="text-muted-foreground hover:text-foreground"
             data-testid="button-notifications"
           >
-            <Bell className="h-5 w-5" fill="currentColor" />
+            <Bell className="h-5 w-5" />
           </Button>
           
           <DropdownMenu>

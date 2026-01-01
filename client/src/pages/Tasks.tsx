@@ -233,10 +233,8 @@ export default function Tasks() {
             className={cn(
               "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
               selectedCategory === cat.id 
-                ? cat.id === "all" 
-                  ? "bg-[#2D2D2D] text-white" 
-                  : "bg-[#2D2D2D] text-white"
-                : "bg-[#E8E8EE] text-[#1D1D1F]"
+                ? "bg-[#2D2D2D] text-white"
+                : "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
             )}
             data-testid={`filter-category-${cat.id}`}
           >
@@ -253,7 +251,7 @@ export default function Tasks() {
       {/* Search Bar - Full Width with Sort/Filter */}
       <div className="flex items-center gap-2 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" fill="currentColor" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Поиск задач"
             className="pl-12 h-11 bg-white border-border rounded-xl w-full"
@@ -303,16 +301,16 @@ export default function Tasks() {
                   <div className="flex items-center gap-2 mb-3">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                        {task.author?.charAt(0) || "A"}
+                        {(task.author || task.authorName || "A").charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-[#1D1D1F] font-medium">{task.author}</span>
+                    <span className="text-sm text-[#1D1D1F] font-medium">{task.author || task.authorName || "Аноним"}</span>
                     <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     <Badge variant="secondary" className="text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0">
-                      {task.category === "product" ? "Продукты" : 
-                       task.category === "uxui" ? "UX/UI" :
-                       task.category === "graphic" ? "Графический" :
-                       task.category === "3d" ? "3D" : "Кейсы"}
+                      {task.category === "product" || task.category === "Продукт" ? "Продукты" : 
+                       task.category === "uxui" || task.category === "UX/UI" ? "UX/UI" :
+                       task.category === "graphic" || task.category === "Графический" ? "Графический" :
+                       task.category === "3d" || task.category === "3D" ? "3D" : "Кейсы"}
                     </Badge>
                     <span className={cn("ml-auto text-sm font-medium", getLevelColor(task.level))}>
                       {getLevelLabel(task.level)}
@@ -329,45 +327,45 @@ export default function Tasks() {
                     {task.description}
                   </p>
                   
-                  {/* Interactive Action Buttons - Reddit style */}
+                  {/* Interactive Action Buttons - Neutral-Primary style */}
                   <div className="flex items-center gap-2">
                     {/* Upvote */}
                     <button
                       onClick={(e) => handleUpvote(e, task.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
                       data-testid={`button-upvote-${task.id}`}
                     >
-                      <ChevronUp className="h-4 w-4" fill="currentColor" strokeWidth={3} />
+                      <ChevronUp className="h-4 w-4" />
                       <span className="text-sm font-medium">{task.likes || 0}</span>
                     </button>
                     
                     {/* Downvote */}
                     <button
                       onClick={(e) => handleDownvote(e, task.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
                       data-testid={`button-downvote-${task.id}`}
                     >
-                      <ChevronDown className="h-4 w-4" fill="currentColor" strokeWidth={3} />
+                      <ChevronDown className="h-4 w-4" />
                       <span className="text-sm font-medium">{task.dislikes || 0}</span>
                     </button>
                     
                     {/* Comments */}
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-[#E8E8EE] transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
                       data-testid={`button-comments-${task.id}`}
                     >
-                      <MessageCircle className="h-4 w-4 text-muted-foreground" fill="currentColor" />
-                      <span className="text-sm text-muted-foreground">{task.comments || 0}</span>
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="text-sm">{task.comments || 0}</span>
                     </button>
                     
                     {/* Bookmark */}
                     <button
                       onClick={(e) => handleBookmark(e, task.id)}
-                      className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[#E8E8EE] transition-colors"
+                      className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center bg-[#E8E8EE] border border-border hover:bg-[#DCDCE4] transition-colors"
                       data-testid={`button-bookmark-${task.id}`}
                     >
-                      <Star className="h-4 w-4 text-muted-foreground" fill="currentColor" />
+                      <Star className="h-4 w-4 text-[#1D1D1F]" />
                     </button>
                   </div>
                 </Card>
