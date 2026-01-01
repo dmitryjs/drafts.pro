@@ -182,11 +182,11 @@ export default function MainLayout({
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header - white background */}
         <header className="h-14 border-b border-border bg-white sticky top-0 z-40 flex items-center justify-end px-4 gap-3">
-          {/* Create button with dropdown - only for authenticated users */}
-          {user && (
+          {/* Create button with dropdown - always visible, redirects to login if not authenticated */}
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="gap-2" data-testid="button-create">
+                <Button className="gap-2 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl" data-testid="button-create">
                   <Plus className="h-4 w-4" />
                   Создать
                   <ChevronDown className="h-4 w-4" />
@@ -209,6 +209,13 @@ export default function MainLayout({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          ) : (
+            <Link href="/auth">
+              <Button className="gap-2 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl" data-testid="button-create">
+                <Plus className="h-4 w-4" />
+                Создать
+              </Button>
+            </Link>
           )}
           
           <Button 
