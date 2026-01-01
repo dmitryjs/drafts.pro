@@ -68,7 +68,8 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
             </div>
             <button 
               className="text-muted-foreground hover:text-foreground"
-              onClick={() => {}}
+              onClick={() => onOpenChange(false)}
+              data-testid="button-close-info"
             >
               <X className="h-4 w-4" />
             </button>
@@ -96,6 +97,7 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
                       setSelectedImage(null);
                       setPreviewUrl(null);
                     }}
+                    data-testid="button-remove-image"
                   >
                     <X className="h-4 w-4" />
                   </button>

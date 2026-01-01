@@ -22,14 +22,6 @@ import { cn } from "@/lib/utils";
 
 type BattlePhase = "waiting" | "moderation" | "voting" | "completed";
 
-interface Participant {
-  name: string;
-  avatar?: string;
-  image?: string;
-  votes?: number;
-  xpReward?: number;
-}
-
 interface Comment {
   id: number;
   author: string;
@@ -40,29 +32,96 @@ interface Comment {
   dislikes: number;
 }
 
-const mockBattle = {
-  id: 1,
-  title: "Название батла крупным текстом",
-  description: "Game kinda complicated at first but then you learn everything gets easier. It's not a game that needs to be played all day, so I think it's worth playing even more for the low investment. The only problem currently is the network rates, which are high, but I believe there will be a solution soon.",
-  phase: "voting" as BattlePhase,
-  creator: {
-    name: "Space cat #4532",
-    avatar: "",
-    image: "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=600&h=600&fit=crop",
-    collection: "Space cats",
-    owner: "Dizplazer",
-    votes: 999999,
+const mockBattlesByPhase: Record<BattlePhase, any> = {
+  waiting: {
+    id: 1,
+    title: "Космический кот #4532",
+    description: "Соревнование между двумя дизайнерами. Создайте свою работу и покажите мастерство.",
+    phase: "waiting" as BattlePhase,
+    creator: {
+      name: "Space cat #4532",
+      avatar: "",
+      image: "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=600&h=600&fit=crop",
+      collection: "Space cats",
+      owner: "Dizplazer",
+      votes: 0,
+    },
+    opponent: null,
+    timeRemaining: null,
+    xpReward: 50,
   },
-  opponent: {
-    name: "Samurai's Silent Vigil",
-    avatar: "",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop",
-    collection: "7Heaven",
-    owner: "Dmitry Galkin",
-    votes: 900999,
+  moderation: {
+    id: 2,
+    title: "Пейзаж горы vs Технологии",
+    description: "Природа против технологий. Два художника соревнуются за звание лучшего в этом батле.",
+    phase: "moderation" as BattlePhase,
+    creator: {
+      name: "Mountain Landscape",
+      avatar: "",
+      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=600&fit=crop",
+      collection: "Nature",
+      owner: "Artist123",
+      votes: 0,
+    },
+    opponent: {
+      name: "Tech Vision",
+      avatar: "",
+      image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&h=600&fit=crop",
+      collection: "Tech Art",
+      owner: "Designer456",
+      votes: 0,
+    },
+    timeRemaining: null,
+    xpReward: 50,
   },
-  timeRemaining: "6 дней 17 часов 32 минуты",
-  xpReward: 50,
+  voting: {
+    id: 3,
+    title: "Название батла крупным текстом",
+    description: "Game kinda complicated at first but then you learn everything gets easier. It's not a game that needs to be played all day, so I think it's worth playing even more for the low investment. The only problem currently is the network rates, which are high, but I believe there will be a solution soon.",
+    phase: "voting" as BattlePhase,
+    creator: {
+      name: "Space cat #4532",
+      avatar: "",
+      image: "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=600&h=600&fit=crop",
+      collection: "Space cats",
+      owner: "Dizplazer",
+      votes: 999999,
+    },
+    opponent: {
+      name: "Samurai's Silent Vigil",
+      avatar: "",
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop",
+      collection: "7Heaven",
+      owner: "Dmitry Galkin",
+      votes: 900999,
+    },
+    timeRemaining: "6 дней 17 часов 32 минуты",
+    xpReward: 50,
+  },
+  completed: {
+    id: 4,
+    title: "Абстракция #789 - Финал",
+    description: "Финальный батл недели завершён. Поздравляем победителя!",
+    phase: "completed" as BattlePhase,
+    creator: {
+      name: "Abstract Dreams",
+      avatar: "",
+      image: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&h=600&fit=crop",
+      collection: "Abstract Art",
+      owner: "Winner",
+      votes: 1500000,
+    },
+    opponent: {
+      name: "Color Explosion",
+      avatar: "",
+      image: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=600&h=600&fit=crop",
+      collection: "Colors",
+      owner: "RunnerUp",
+      votes: 1200000,
+    },
+    timeRemaining: null,
+    xpReward: 50,
+  }
 };
 
 const mockComments: Comment[] = [
@@ -91,6 +150,13 @@ const phaseLabels = {
   completed: "Объявление победителя",
 };
 
+const slugToPhase: Record<string, BattlePhase> = {
+  "space-cat-4532": "waiting",
+  "mountain-landscape": "moderation", 
+  "space-cat-vs-samurai": "voting",
+  "abstraction-789": "completed",
+};
+
 export default function BattleDetail() {
   const [, params] = useRoute("/battles/:slug");
   const slug = params?.slug || "";
@@ -101,10 +167,11 @@ export default function BattleDetail() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const battle = mockBattle;
+  const phase = slugToPhase[slug] || "voting";
+  const battle = mockBattlesByPhase[phase];
   const hasOpponent = !!battle.opponent?.image;
-  const canVote = battle.phase === "voting" && user;
-  const isCompleted = battle.phase === "completed";
+  const canVote = phase === "voting" && user;
+  const isCompleted = phase === "completed";
 
   const handleVote = () => {
     if (!user) {
@@ -131,7 +198,10 @@ export default function BattleDetail() {
   };
 
   const phases: BattlePhase[] = ["waiting", "moderation", "voting", "completed"];
-  const currentPhaseIndex = phases.indexOf(battle.phase);
+  const currentPhaseIndex = phases.indexOf(phase);
+
+  const creatorWon = isCompleted && battle.creator.votes > (battle.opponent?.votes || 0);
+  const opponentWon = isCompleted && (battle.opponent?.votes || 0) > battle.creator.votes;
 
   return (
     <MainLayout>
@@ -139,28 +209,38 @@ export default function BattleDetail() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-4xl"
+        data-testid="battle-detail-page"
       >
+        {/* Back Button */}
+        <Link href="/battles">
+          <Button variant="ghost" className="mb-4 gap-2" data-testid="button-back-to-battles">
+            <ArrowLeft className="h-4 w-4" />
+            Назад к батлам
+          </Button>
+        </Link>
+
         {/* Phase Progress */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-          {phases.map((phase, index) => {
-            const isActive = phase === battle.phase;
-            const isCompleted = index < currentPhaseIndex;
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2" data-testid="phase-progress">
+          {phases.map((p, index) => {
+            const isActive = p === phase;
+            const isPassed = index < currentPhaseIndex;
             
             return (
               <Badge
-                key={phase}
+                key={p}
                 className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap",
+                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-1",
                   isActive
                     ? "bg-[#2D2D2D] text-white"
-                    : isCompleted
+                    : isPassed
                     ? "bg-emerald-100 text-emerald-700"
                     : "bg-[#E8E8EE] text-muted-foreground"
                 )}
+                data-testid={`phase-badge-${p}`}
               >
-                {isCompleted && <Check className="h-3 w-3 mr-1" />}
+                {isPassed && <Check className="h-3 w-3" />}
                 <span className="mr-1">{index + 1}</span>
-                {phaseLabels[phase]}
+                {phaseLabels[p]}
               </Badge>
             );
           })}
@@ -169,12 +249,12 @@ export default function BattleDetail() {
         {/* Two Column Layout for Participants */}
         <div className="grid grid-cols-2 gap-6 mb-8">
           {/* Creator Side */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Соперник</p>
-            <h2 className="text-xl font-bold text-[#1D1D1F] mb-3 flex items-center gap-2">
+          <div data-testid="creator-section">
+            <p className="text-xs text-muted-foreground mb-2">Создатель</p>
+            <h2 className="text-xl font-bold text-[#1D1D1F] mb-3 flex items-center gap-2" data-testid="text-creator-name">
               {battle.creator.name}
-              {isCompleted && battle.creator.votes > (battle.opponent?.votes || 0) && (
-                <Badge className="bg-amber-100 text-amber-700">+{battle.xpReward}XP</Badge>
+              {creatorWon && (
+                <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
               )}
             </h2>
             
@@ -202,20 +282,21 @@ export default function BattleDetail() {
                 src={battle.creator.image} 
                 alt={battle.creator.name}
                 className="w-full h-full object-cover"
+                data-testid="img-creator-work"
               />
             </div>
           </div>
           
           {/* Opponent Side */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Вы</p>
+          <div data-testid="opponent-section">
+            <p className="text-xs text-muted-foreground mb-2">Оппонент</p>
             
             {hasOpponent ? (
               <>
-                <h2 className="text-xl font-bold text-[#1D1D1F] mb-3 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-[#1D1D1F] mb-3 flex items-center gap-2" data-testid="text-opponent-name">
                   {battle.opponent.name}
-                  {isCompleted && (battle.opponent?.votes || 0) > battle.creator.votes && (
-                    <Badge className="bg-amber-100 text-amber-700">+{battle.xpReward}XP</Badge>
+                  {opponentWon && (
+                    <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
                   )}
                 </h2>
                 
@@ -243,36 +324,46 @@ export default function BattleDetail() {
                     src={battle.opponent.image} 
                     alt={battle.opponent.name}
                     className="w-full h-full object-cover"
+                    data-testid="img-opponent-work"
                   />
                 </div>
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold text-muted-foreground mb-3">Название работы</h2>
+                <h2 className="text-xl font-bold text-muted-foreground mb-3" data-testid="text-waiting-opponent">
+                  Ожидаем оппонента
+                </h2>
                 
-                <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center gap-4 mb-4 opacity-50">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded bg-[#E8E8EE]" />
                     <div className="text-xs">
                       <p className="text-muted-foreground">Коллекция</p>
-                      <p className="text-muted-foreground">Collection name</p>
+                      <p className="text-muted-foreground">—</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs bg-pink-100">?</AvatarFallback>
+                      <AvatarFallback className="text-xs bg-muted">?</AvatarFallback>
                     </Avatar>
                     <div className="text-xs">
                       <p className="text-muted-foreground">Владелец</p>
-                      <p className="text-muted-foreground">Owner name</p>
+                      <p className="text-muted-foreground">—</p>
                     </div>
                   </div>
                 </div>
                 
-                <Card className="aspect-square bg-[#F9F9F9] border-2 border-dashed flex flex-col items-center justify-center">
+                <Card className="aspect-square bg-[#F9F9F9] border-2 border-dashed flex flex-col items-center justify-center relative">
                   {previewUrl ? (
                     <div className="relative w-full h-full">
-                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover rounded-lg" data-testid="img-join-preview" />
+                      <Button 
+                        className="absolute bottom-4 left-4 right-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-xl"
+                        onClick={handleJoinBattle}
+                        data-testid="button-confirm-join"
+                      >
+                        Присоединиться к батлу
+                      </Button>
                     </div>
                   ) : (
                     <>
@@ -282,8 +373,9 @@ export default function BattleDetail() {
                           accept="image/*"
                           className="hidden"
                           onChange={handleImageSelect}
+                          data-testid="input-join-image"
                         />
-                        <Button variant="outline" className="rounded-xl mb-3">
+                        <Button variant="outline" className="rounded-xl mb-3" data-testid="button-select-join-file">
                           Выбрать файл
                         </Button>
                         <p className="text-sm text-muted-foreground text-center px-6">
@@ -292,7 +384,7 @@ export default function BattleDetail() {
                       </label>
                       
                       <div className="absolute bottom-4 left-4 right-4">
-                        <div className="flex items-start gap-2 p-3 bg-white rounded-lg">
+                        <div className="flex items-start gap-2 p-3 bg-white rounded-lg shadow-sm">
                           <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                           <div className="text-xs text-muted-foreground">
                             <span className="font-medium text-[#1D1D1F]">Важно!</span>
@@ -311,25 +403,39 @@ export default function BattleDetail() {
 
         {/* Battle Title and Description */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#1D1D1F] mb-4">{battle.title}</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <h1 className="text-2xl font-bold text-[#1D1D1F] mb-4" data-testid="text-battle-title">{battle.title}</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-battle-description">
             {battle.description}
           </p>
-          <button className="text-sm text-blue-600 hover:underline mt-2">
+          <button className="text-sm text-blue-600 hover:underline mt-2" data-testid="button-show-more">
             Показать ещё
           </button>
         </div>
 
+        {/* Moderation Notice */}
+        {phase === "moderation" && (
+          <Card className="p-6 mb-8 bg-amber-50 border-amber-200" data-testid="card-moderation-notice">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-5 w-5 text-amber-600" />
+              <span className="font-semibold text-amber-800">На модерации</span>
+            </div>
+            <p className="text-sm text-amber-700">
+              Ваш батл проходит проверку модераторами. Обычно это занимает от 1 до 24 часов. 
+              После одобрения начнётся голосование.
+            </p>
+          </Card>
+        )}
+
         {/* Voting Section */}
-        {battle.phase === "voting" && (
-          <Card className="p-6 mb-8 bg-white border-0 shadow-sm">
+        {phase === "voting" && (
+          <Card className="p-6 mb-8 bg-white border-0 shadow-sm" data-testid="card-voting-section">
             <div className="flex items-center gap-2 mb-4">
               <Check className="h-5 w-5 text-muted-foreground" />
               <span className="font-semibold text-[#1D1D1F]">Голосование</span>
             </div>
             
             <p className="text-sm text-muted-foreground mb-2">Оставшееся время:</p>
-            <p className="text-2xl font-bold text-[#1D1D1F] mb-6">{battle.timeRemaining}</p>
+            <p className="text-2xl font-bold text-[#1D1D1F] mb-6" data-testid="text-time-remaining">{battle.timeRemaining}</p>
             
             {/* Vote Options */}
             <div className="space-y-3 mb-6">
@@ -341,6 +447,7 @@ export default function BattleDetail() {
                     ? "border-[#2D2D2D] bg-[#F9F9F9]" 
                     : "border-border hover:border-muted-foreground"
                 )}
+                data-testid="button-vote-creator"
               >
                 <img 
                   src={battle.creator.image} 
@@ -354,12 +461,6 @@ export default function BattleDetail() {
                 {selectedVote === "creator" && (
                   <Check className="h-5 w-5 text-[#1D1D1F]" />
                 )}
-                {isCompleted && (
-                  <div className="text-right">
-                    <p className="font-bold text-[#1D1D1F]">{battle.creator.votes?.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Voted</p>
-                  </div>
-                )}
               </button>
               
               {hasOpponent && (
@@ -371,6 +472,7 @@ export default function BattleDetail() {
                       ? "border-[#2D2D2D] bg-[#F9F9F9]" 
                       : "border-border hover:border-muted-foreground"
                   )}
+                  data-testid="button-vote-opponent"
                 >
                   <img 
                     src={battle.opponent.image} 
@@ -384,30 +486,61 @@ export default function BattleDetail() {
                   {selectedVote === "opponent" && (
                     <Check className="h-5 w-5 text-[#1D1D1F]" />
                   )}
-                  {isCompleted && (
-                    <div className="text-right">
-                      <p className="font-bold text-[#1D1D1F]">{battle.opponent.votes?.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">Voted</p>
-                    </div>
-                  )}
                 </button>
               )}
             </div>
             
-            {!isCompleted && (
-              <Button 
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-xl"
-                onClick={handleVote}
-                disabled={!selectedVote}
-              >
-                Голосовать и получить <Badge className="ml-2 bg-white/20 text-white">5XP</Badge>
-              </Button>
-            )}
+            <Button 
+              className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-xl"
+              onClick={handleVote}
+              disabled={!selectedVote}
+              data-testid="button-submit-vote"
+            >
+              Голосовать и получить <Badge className="ml-2 bg-white/20 text-white">5XP</Badge>
+            </Button>
+          </Card>
+        )}
+
+        {/* Completed Section - Winner Announcement */}
+        {isCompleted && (
+          <Card className="p-6 mb-8 bg-emerald-50 border-emerald-200" data-testid="card-winner-announcement">
+            <div className="flex items-center gap-2 mb-4">
+              <Check className="h-5 w-5 text-emerald-600" />
+              <span className="font-semibold text-emerald-800">Батл завершён</span>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <img 
+                src={creatorWon ? battle.creator.image : battle.opponent.image} 
+                alt="Winner"
+                className="w-16 h-16 rounded-xl object-cover border-4 border-emerald-300"
+              />
+              <div>
+                <p className="text-sm text-emerald-700">Победитель:</p>
+                <p className="text-xl font-bold text-emerald-800" data-testid="text-winner-name">
+                  {creatorWon ? battle.creator.name : battle.opponent.name}
+                </p>
+                <p className="text-sm text-emerald-600">
+                  {creatorWon ? battle.creator.owner : battle.opponent.owner} получил +{battle.xpReward}XP
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-emerald-200">
+              <div className="flex justify-between text-sm">
+                <span className="text-emerald-700">{battle.creator.name}</span>
+                <span className="font-medium text-emerald-800" data-testid="text-creator-votes">{battle.creator.votes.toLocaleString()} голосов</span>
+              </div>
+              <div className="flex justify-between text-sm mt-2">
+                <span className="text-emerald-700">{battle.opponent.name}</span>
+                <span className="font-medium text-emerald-800" data-testid="text-opponent-votes">{battle.opponent.votes.toLocaleString()} голосов</span>
+              </div>
+            </div>
           </Card>
         )}
 
         {/* Comments Section */}
-        <Card className="p-6 bg-white border-0 shadow-sm">
+        <Card className="p-6 bg-white border-0 shadow-sm" data-testid="card-comments">
           <div className="flex items-center gap-2 mb-4">
             <MessageCircle className="h-5 w-5 text-muted-foreground" />
             <span className="font-semibold text-[#1D1D1F]">Комментарии</span>
@@ -419,21 +552,32 @@ export default function BattleDetail() {
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             className="mb-4 rounded-xl resize-none"
-            disabled={battle.phase === "waiting" || battle.phase === "moderation"}
+            disabled={phase === "waiting" || phase === "moderation"}
+            data-testid="input-comment"
           />
           
-          {(battle.phase === "waiting" || battle.phase === "moderation") && (
-            <p className="text-sm text-muted-foreground flex items-center gap-2 mb-4">
+          {(phase === "waiting" || phase === "moderation") && (
+            <p className="text-sm text-muted-foreground flex items-center gap-2 mb-4" data-testid="text-comments-disabled">
               <Info className="h-4 w-4" />
               Комментарии будут доступны после прохождения модерации
             </p>
           )}
           
+          {(phase === "voting" || phase === "completed") && (
+            <Button 
+              className="mb-4 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl"
+              disabled={!commentText.trim()}
+              data-testid="button-submit-comment"
+            >
+              Отправить
+            </Button>
+          )}
+          
           {/* Comments List */}
-          {battle.phase !== "waiting" && battle.phase !== "moderation" && (
-            <div className="space-y-4">
+          {(phase === "voting" || phase === "completed") && (
+            <div className="space-y-4" data-testid="comments-list">
               {mockComments.map((comment) => (
-                <div key={comment.id} className="border-t pt-4">
+                <div key={comment.id} className="border-t pt-4" data-testid={`comment-${comment.id}`}>
                   <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="text-xs">{comment.author.charAt(0)}</AvatarFallback>
@@ -445,11 +589,17 @@ export default function BattleDetail() {
                       </div>
                       <p className="text-sm text-[#1D1D1F]">{comment.content}</p>
                       <div className="flex items-center gap-4 mt-2">
-                        <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[#1D1D1F]">
+                        <button 
+                          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[#1D1D1F]"
+                          data-testid={`button-like-${comment.id}`}
+                        >
                           <ThumbsUp className="h-4 w-4" />
                           {comment.likes}
                         </button>
-                        <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[#1D1D1F]">
+                        <button 
+                          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[#1D1D1F]"
+                          data-testid={`button-dislike-${comment.id}`}
+                        >
                           <ThumbsDown className="h-4 w-4" />
                           {comment.dislikes}
                         </button>
