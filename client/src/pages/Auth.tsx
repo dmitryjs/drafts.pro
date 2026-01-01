@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, ArrowLeft } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -101,6 +101,17 @@ export default function Auth() {
           transition={{ duration: 0.3 }}
           className="w-full max-w-sm"
         >
+          {/* Back Button */}
+          <Button
+            variant="secondary"
+            className="mb-6 gap-2 bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#1D1D1F] rounded-xl"
+            onClick={() => window.history.back()}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Назад
+          </Button>
+
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-2 mb-8">
             <div className="w-8 h-8 bg-[#1D1D1F] rounded-md flex items-center justify-center">

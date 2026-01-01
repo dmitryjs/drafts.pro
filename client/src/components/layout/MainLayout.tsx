@@ -182,91 +182,82 @@ export default function MainLayout({
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header - white background */}
         <header className="h-14 border-b border-border bg-white sticky top-0 z-40 flex items-center justify-end px-4 gap-3">
-          {/* Create button with dropdown - always visible, redirects to login if not authenticated */}
           {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="gap-2 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl" data-testid="button-create">
-                  <Plus className="h-4 w-4" />
-                  Создать
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuItem 
-                  className="cursor-pointer py-2.5"
-                  onClick={onCreateTask || onCreateClick}
-                >
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  Задача
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="cursor-pointer py-2.5"
-                  onClick={onCreateBattle || onCreateClick}
-                >
-                  <Swords className="mr-2 h-4 w-4" />
-                  Батл
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link href="/auth">
-              <Button className="gap-2 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl" data-testid="button-create">
-                <Plus className="h-4 w-4" />
-                Создать
-              </Button>
-            </Link>
-          )}
-          
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="text-muted-foreground hover:text-foreground"
-            data-testid="button-notifications"
-          >
-            <Bell className="h-5 w-5" />
-          </Button>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <>
+              {/* Create button with dropdown - only for authenticated users */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="gap-2 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl" data-testid="button-create">
+                    <Plus className="h-4 w-4" />
+                    Создать
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[200px]">
+                  <DropdownMenuItem 
+                    className="cursor-pointer py-2.5"
+                    onClick={onCreateTask || onCreateClick}
+                  >
+                    <LayoutGrid className="mr-2 h-4 w-4" />
+                    Задача
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="cursor-pointer py-2.5"
+                    onClick={onCreateBattle || onCreateClick}
+                  >
+                    <Swords className="mr-2 h-4 w-4" />
+                    Батл
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
               <Button 
                 variant="ghost" 
-                size="icon" 
-                className="rounded-full"
-                data-testid="button-avatar"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+                data-testid="button-notifications"
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={profile?.avatarUrl || undefined} />
-                  <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                    {getInitials()}
-                  </AvatarFallback>
-                </Avatar>
+                <Bell className="h-5 w-5" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">
-                    {profile?.username || "Пользователь"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {user?.email || "Не авторизован"}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <Link href="/profile">
-                <DropdownMenuItem className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" /> Профиль
-                </DropdownMenuItem>
-              </Link>
-              <Link href="/settings">
-                <DropdownMenuItem className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" /> Настройки
-                </DropdownMenuItem>
-              </Link>
-              {user && (
-                <>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full"
+                    data-testid="button-avatar"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatarUrl || undefined} />
+                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">
+                        {profile?.username || "Пользователь"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <Link href="/profile">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" /> Профиль
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/settings">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" /> Настройки
+                    </DropdownMenuItem>
+                  </Link>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-destructive focus:text-destructive"
@@ -274,10 +265,16 @@ export default function MainLayout({
                   >
                     <LogOut className="mr-2 h-4 w-4" /> Выйти
                   </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Link href="/auth">
+              <Button className="bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl" data-testid="button-login-header">
+                Войти
+              </Button>
+            </Link>
+          )}
         </header>
 
         {/* Content */}
