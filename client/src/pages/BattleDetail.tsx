@@ -358,7 +358,7 @@ export default function BattleDetail() {
                     <div className="relative w-full h-full">
                       <img src={previewUrl} alt="Preview" className="w-full h-full object-cover rounded-lg" data-testid="img-join-preview" />
                       <Button 
-                        className="absolute bottom-4 left-4 right-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-xl"
+                        className="absolute bottom-4 left-4 right-4 bg-[#FF6030] hover:bg-[#E55528] text-[#1D1D1F] font-medium rounded-xl"
                         onClick={handleJoinBattle}
                         data-testid="button-confirm-join"
                       >

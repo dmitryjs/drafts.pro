@@ -5,7 +5,6 @@ import {
   Clock, 
   Users, 
   Plus,
-  ChevronDown,
   Swords
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
@@ -13,16 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import CreateBattleModal from "@/components/modals/CreateBattleModal";
+import AuthRequiredModal from "@/components/modals/AuthRequiredModal";
 
 type BattleStatus = "waiting" | "moderation" | "voting" | "completed";
 
@@ -126,8 +119,8 @@ const getStatusColor = (status: BattleStatus) => {
 
 export default function Battles() {
   const [activeTab, setActiveTab] = useState("active");
-  const [sortBy, setSortBy] = useState("recent");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { user } = useAuth();
   const [, navigate] = useLocation();
 
@@ -144,7 +137,7 @@ export default function Battles() {
     if (user) {
       setIsCreateModalOpen(true);
     } else {
-      navigate("/auth");
+      setIsAuthModalOpen(true);
     }
   };
 
@@ -165,26 +158,13 @@ export default function Battles() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#1D1D1F]">Батлы</h1>
         
-        <div className="flex items-center gap-3">
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[180px] bg-white border-border rounded-xl">
-              <SelectValue placeholder="Сортировка" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Недавно добавленные</SelectItem>
-              <SelectItem value="popular">По популярности</SelectItem>
-              <SelectItem value="ending">Скоро закончатся</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button 
-            className="gap-2 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl"
-            onClick={handleCreateBattle}
-            data-testid="button-new-battle"
-          >
-            Новый батл
-          </Button>
-        </div>
+        <Button 
+          className="gap-2 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl"
+          onClick={handleCreateBattle}
+          data-testid="button-new-battle"
+        >
+          Новый батл
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -262,7 +242,7 @@ export default function Battles() {
                     
                     {/* VS Badge */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                      <div className="w-12 h-12 rounded-full bg-[#2D2D2D] flex items-center justify-center text-white font-bold text-sm shadow-lg">
                         VS
                       </div>
                     </div>
@@ -278,7 +258,7 @@ export default function Battles() {
                       ) : (
                         <div className="w-full h-full bg-[#F4F4F5] flex items-center justify-center">
                           <Button 
-                            className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-full px-6"
+                            className="bg-[#FF6030] hover:bg-[#E55528] text-[#1D1D1F] font-medium rounded-full px-6"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -375,6 +355,13 @@ export default function Battles() {
       <CreateBattleModal 
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen} 
+      />
+
+      {/* Auth Required Modal */}
+      <AuthRequiredModal
+        open={isAuthModalOpen}
+        onOpenChange={setIsAuthModalOpen}
+        message="Авторизуйтесь чтобы создавать батлы"
       />
     </MainLayout>
   );
