@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutGrid,
@@ -23,7 +23,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import type { Profile } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import logoPath from "@assets/Logo_black_1767028620121.png";
 
@@ -54,15 +56,23 @@ export default function MainLayout({
   onCreateBattle
 }: MainLayoutProps) {
   const [location] = useLocation();
-  const { user, profile, signOut, isConfigured, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+  
+  const { data: profile } = useQuery<Profile>({
+    queryKey: ['/api/profiles', user?.id],
+    enabled: !!user?.id,
+  });
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = () => {
+    logout();
   };
 
   const getInitials = () => {
     if (profile?.username) {
       return profile.username.slice(0, 2).toUpperCase();
+    }
+    if (user?.firstName) {
+      return user.firstName.slice(0, 2).toUpperCase();
     }
     if (user?.email) {
       return user.email.slice(0, 2).toUpperCase();
@@ -167,14 +177,14 @@ export default function MainLayout({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : isConfigured ? (
+          ) : (
             <Link href="/auth">
               <Button variant="default" className="w-full" data-testid="button-sign-in">
                 <LogIn className="mr-2 h-4 w-4" />
                 Войти
               </Button>
             </Link>
-          ) : null}
+          )}
         </div>
       </aside>
 

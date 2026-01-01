@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import CreateBattleModal from "@/components/modals/CreateBattleModal";
 import AuthRequiredModal from "@/components/modals/AuthRequiredModal";

@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { useHealth } from "@/hooks/use-data";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -33,7 +33,7 @@ interface AppShellProps {
 export default function AppShell({ children, hideNav = false }: AppShellProps) {
   const [location] = useLocation();
   const { data: health } = useHealth();
-  const { user, profile, signOut, isConfigured, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
 
   const navItems = [
     { href: "/", icon: Home, label: "Главная" },
@@ -43,13 +43,13 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
     { href: "/mentors", icon: Users, label: "Менторы" },
   ];
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = () => {
+    logout();
   };
 
   const getInitials = () => {
-    if (profile?.username) {
-      return profile.username.slice(0, 2).toUpperCase();
+    if (user?.firstName) {
+      return user.firstName.slice(0, 2).toUpperCase();
     }
     if (user?.email) {
       return user.email.slice(0, 2).toUpperCase();
@@ -77,7 +77,7 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full ring-2 ring-transparent hover:ring-primary/20 transition-all">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={profile?.avatarUrl || undefined} />
+                    <AvatarImage src={user?.profileImageUrl || undefined} />
                     <AvatarFallback className="text-xs">{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -86,7 +86,7 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {profile?.username || "Пользователь"}
+                      {user?.firstName || "Пользователь"}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
@@ -113,14 +113,14 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : isConfigured ? (
+          ) : (
             <Link href="/auth">
               <Button variant="default" size="sm" data-testid="button-sign-in">
                 <LogIn className="mr-2 h-4 w-4" />
                 Войти
               </Button>
             </Link>
-          ) : null}
+          )}
         </div>
       </header>
 

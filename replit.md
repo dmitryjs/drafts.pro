@@ -57,8 +57,16 @@ DesignHub — это веб-платформа для дизайнеров, по
 - `shared/routes.ts` — определения API маршрутов
 
 ### Аутентификация
-- **Provider**: Supabase Auth (email OTP)
-- **Переменные**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- **Provider**: Replit Auth (OpenID Connect)
+- **Методы входа**: Google, GitHub, Apple, email/password (через Replit)
+- **Таблицы**:
+  - `sessions` — хранение сессий (express-session)
+  - `auth_users` — пользователи Replit Auth
+  - `profiles` — синхронизируется с auth_users через authUid
+- **API Эндпоинты авторизации**:
+  - `GET /api/login` — редирект на Replit Auth
+  - `GET /api/logout` — выход из системы
+  - `GET /api/auth/user` — получить текущего пользователя
 
 ## API Эндпоинты
 

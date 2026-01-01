@@ -382,3 +382,6 @@ export type InsertUserXp = z.infer<typeof insertUserXpSchema>;
 
 export type XpTransaction = typeof xpTransactions.$inferSelect;
 export type InsertXpTransaction = z.infer<typeof insertXpTransactionSchema>;
+
+// Replit Auth models
+export * from "./models/auth";

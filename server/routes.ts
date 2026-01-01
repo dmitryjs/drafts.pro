@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 
 async function seedDatabase() {
   const existingTasks = await storage.getTasks();
@@ -128,6 +129,10 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // Setup Replit Auth (BEFORE other routes)
+  await setupAuth(app);
+  registerAuthRoutes(app);
   
   // Seed data on startup
   seedDatabase();

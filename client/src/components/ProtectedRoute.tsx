@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -8,29 +8,21 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading, isConfigured } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && isConfigured && !user) {
+    if (!isLoading && !isAuthenticated) {
       setLocation('/auth');
     }
-  }, [user, isLoading, isConfigured, setLocation]);
+  }, [isAuthenticated, isLoading, setLocation]);
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F9F9F9]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
-  }
-
-  if (!isConfigured) {
-    return <>{children}</>;
-  }
-
-  if (!user) {
-    return null;
   }
 
   return <>{children}</>;
