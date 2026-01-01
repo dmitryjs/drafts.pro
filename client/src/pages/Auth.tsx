@@ -7,6 +7,9 @@ import { Mail, Lock, Loader2, ArrowLeft } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import authBgImage from "@assets/BGauth_1767278053848.png";
+import taglineImage from "@assets/Место_где_дизайнеры_развиваются_1767278112161.png";
+import draftsLogoWhite from "@assets/draftslogo_1767278269094.png";
 
 type AuthMode = "login" | "register";
 
@@ -67,34 +70,39 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Gradient Hero */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-blue-500 to-pink-500" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-        
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white rounded-md flex items-center justify-center">
-              <span className="text-black font-bold text-sm">/</span>
+    <div className="min-h-screen bg-white p-5">
+      <div className="h-[calc(100vh-40px)] flex">
+        {/* Left Side - Gradient Hero */}
+        <div 
+          className="hidden lg:flex lg:w-1/2 relative overflow-hidden rounded-3xl"
+          style={{
+            backgroundImage: `url(${authBgImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div className="relative z-10 flex flex-col justify-between p-10 w-full">
+            {/* Logo */}
+            <img 
+              src={draftsLogoWhite} 
+              alt="Drafts" 
+              style={{ width: '160px', height: '16px' }}
+            />
+            
+            {/* Tagline Image */}
+            <div className="mb-10">
+              <img 
+                src={taglineImage} 
+                alt="Место где дизайнеры развиваются" 
+                className="max-w-full h-auto"
+                style={{ maxWidth: '80%' }}
+              />
             </div>
-            <span className="text-xl font-bold tracking-tight">DRAFTS</span>
-          </div>
-          
-          {/* Tagline */}
-          <div className="mb-24">
-            <h1 className="text-5xl font-black leading-tight tracking-tight">
-              МЕСТО ГДЕ<br />
-              ДИЗАЙНЕРЫ<br />
-              РАЗВИВАЮТСЯ
-            </h1>
           </div>
         </div>
-      </div>
 
-      {/* Right Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-white">
+        {/* Right Side - Form */}
+        <div className="flex-1 flex items-center justify-center bg-white">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -224,6 +232,7 @@ export default function Auth() {
             </p>
           )}
         </motion.div>
+        </div>
       </div>
     </div>
   );
