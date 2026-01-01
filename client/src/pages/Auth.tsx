@@ -8,7 +8,7 @@ import { SiGoogle } from "react-icons/si";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import authBgImage from "@assets/BGauth_1767278053848.png";
-import taglineImage from "@assets/Место_где_дизайнеры_развиваются_1767278112161.png";
+import taglineImage from "@assets/tagline_text.png";
 import draftsLogoWhite from "@assets/draftslogo_1767278269094.png";
 
 type AuthMode = "login" | "register";
