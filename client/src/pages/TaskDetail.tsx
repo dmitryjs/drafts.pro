@@ -3,62 +3,51 @@ import { useRoute, Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
   ArrowLeft, 
-  Clock, 
-  Users, 
+  Star,
+  MoreHorizontal,
+  Send,
+  Check,
+  Calendar,
+  Users,
   Briefcase,
-  Palette,
-  Smartphone,
-  Box,
-  FileText,
-  Tag,
-  Upload
+  FolderOpen,
+  FileImage,
+  Upload,
+  ChevronRight
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTask } from "@/hooks/use-data";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-
-const getCategoryIcon = (category: string) => {
-  switch (category?.toLowerCase()) {
-    case "продукт":
-    case "product": return Briefcase;
-    case "графический":
-    case "graphic": return Palette;
-    case "ux/ui":
-    case "uxui": return Smartphone;
-    case "3d": return Box;
-    case "кейсы":
-    case "cases": return FileText;
-    default: return FileText;
-  }
-};
-
-const getCategoryColor = (category: string) => {
-  switch (category?.toLowerCase()) {
-    case "продукт":
-    case "product": return "bg-purple-100 text-purple-700";
-    case "графический":
-    case "graphic": return "bg-amber-100 text-amber-700";
-    case "ux/ui":
-    case "uxui": return "bg-pink-100 text-pink-700";
-    case "3d": return "bg-blue-100 text-blue-700";
-    case "кейсы":
-    case "cases": return "bg-red-100 text-red-700";
-    default: return "bg-gray-100 text-gray-700";
-  }
-};
 
 const getLevelColor = (level: string) => {
   switch (level?.toLowerCase()) {
-    case "intern": return "bg-sky-100 text-sky-700";
-    case "junior": return "bg-emerald-100 text-emerald-700";
-    case "middle": return "bg-amber-100 text-amber-700";
-    case "senior": return "bg-orange-100 text-orange-700";
-    case "lead": return "bg-rose-100 text-rose-700";
-    default: return "bg-gray-100 text-gray-600";
+    case "intern": return "text-[#666666]";
+    case "junior": return "text-[#159931]";
+    case "middle": return "text-[#FF9232]";
+    case "senior": return "text-[#325BFF]";
+    case "lead": return "text-[#FF32B7]";
+    default: return "text-gray-500";
+  }
+};
+
+const getCategoryLabel = (category: string) => {
+  switch (category?.toLowerCase()) {
+    case "продукт":
+    case "product": return "Продукт";
+    case "графический":
+    case "graphic": return "Графический";
+    case "ux/ui":
+    case "uxui": return "UX/UI";
+    case "3d": return "3D";
+    case "кейсы":
+    case "cases": return "Кейсы";
+    default: return category;
   }
 };
 
@@ -66,12 +55,15 @@ export default function TaskDetail() {
   const [, params] = useRoute("/tasks/:slug");
   const slug = params?.slug || "";
   const { data: task, isLoading } = useTask(slug);
-  const [solution, setSolution] = useState("");
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("description");
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [userSolution, setUserSolution] = useState<any>(null);
 
   if (isLoading) {
     return (
-      <MainLayout title="Загрузка..." showCreateButton={false}>
-        <div className="space-y-4">
+      <MainLayout>
+        <div className="space-y-4 max-w-4xl">
           <div className="h-8 bg-muted animate-pulse rounded w-3/4" />
           <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
           <div className="h-64 bg-muted animate-pulse rounded" />
@@ -82,7 +74,7 @@ export default function TaskDetail() {
 
   if (!task) {
     return (
-      <MainLayout title="Задача не найдена" showCreateButton={false}>
+      <MainLayout>
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">Эта задача не существует или была удалена</p>
           <Link href="/">
@@ -93,169 +85,324 @@ export default function TaskDetail() {
     );
   }
 
-  const CategoryIcon = getCategoryIcon(task.category);
+  const authorName = task.author || task.authorName || "Аноним";
+  const attachments = task.attachments || [];
+  const visibleAttachments = attachments.slice(0, 4);
+  const remainingCount = Math.max(0, attachments.length - 4);
 
-  const rightPanel = (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-semibold mb-3">Информация</h3>
-        <div className="space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Уровень</span>
-            <Badge className={cn("text-xs", getLevelColor(task.level))}>
-              {task.level}
-            </Badge>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Категория</span>
-            <span className="font-medium">{task.category}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Решений</span>
-            <span className="font-medium">{task.solutionsCount || 0}</span>
-          </div>
-        </div>
-      </div>
+  const handleBookmark = () => {
+    if (!user) return;
+    setIsBookmarked(!isBookmarked);
+  };
 
-      {task.tags && task.tags.length > 0 && (
-        <div className="border-t pt-6">
-          <h3 className="font-semibold mb-3">Теги</h3>
-          <div className="flex flex-wrap gap-2">
-            {task.tags.map((tag: string, index: number) => (
-              <Badge key={index} variant="outline" className="text-xs">
-                <Tag className="h-3 w-3 mr-1" />
-                {tag}
-              </Badge>
+  const handleSubmitSolution = () => {
+    if (!user) return;
+  };
+
+  const parseDescription = (description: string) => {
+    const lines = description?.split('\n') || [];
+    const elements: JSX.Element[] = [];
+    let i = 0;
+    
+    while (i < lines.length) {
+      const line = lines[i];
+      
+      if (line.startsWith('**') && line.endsWith('**')) {
+        elements.push(
+          <h3 key={i} className="font-semibold text-[#1D1D1F] mt-6 mb-2 first:mt-0">
+            {line.replace(/\*\*/g, '')}
+          </h3>
+        );
+        i++;
+      } else if (line.startsWith('- ')) {
+        const items: string[] = [];
+        while (i < lines.length && lines[i].startsWith('- ')) {
+          items.push(lines[i].substring(2));
+          i++;
+        }
+        elements.push(
+          <ul key={`ul-${i}`} className="ml-4 space-y-1 mb-4">
+            {items.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2">
+                <Check className="h-4 w-4 text-[#159931] mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-[#1D1D1F]">{item}</span>
+              </li>
             ))}
-          </div>
-        </div>
-      )}
-
-      {task.sphere && (
-        <div className="border-t pt-6">
-          <h3 className="font-semibold mb-3">Сфера</h3>
-          <p className="text-sm text-muted-foreground">{task.sphere}</p>
-        </div>
-      )}
-    </div>
-  );
+          </ul>
+        );
+      } else if (/^\d+\./.test(line)) {
+        const items: string[] = [];
+        while (i < lines.length && /^\d+\./.test(lines[i])) {
+          items.push(lines[i].replace(/^\d+\.\s*/, ''));
+          i++;
+        }
+        elements.push(
+          <ol key={`ol-${i}`} className="ml-4 list-decimal space-y-1 mb-4">
+            {items.map((item, idx) => <li key={idx} className="text-sm text-[#1D1D1F]">{item}</li>)}
+          </ol>
+        );
+      } else if (line.trim()) {
+        elements.push(<p key={i} className="text-sm text-[#1D1D1F] mb-2">{line}</p>);
+        i++;
+      } else {
+        i++;
+      }
+    }
+    return elements;
+  };
 
   return (
-    <MainLayout rightPanel={rightPanel} showCreateButton={false}>
+    <MainLayout>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-6"
+        className="max-w-4xl"
       >
-        {/* Back button */}
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="gap-2 -ml-2">
-            <ArrowLeft className="h-4 w-4" />
-            Назад к задачам
-          </Button>
-        </Link>
-
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <div className={cn(
-            "w-12 h-12 rounded-lg flex items-center justify-center shrink-0",
-            getCategoryColor(task.category)
-          )}>
-            <CategoryIcon className="h-6 w-6" />
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between mb-6">
+          {/* Left: Back + Author */}
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <button 
+                className="h-9 w-9 rounded-full flex items-center justify-center bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors"
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-4 w-4 text-[#1D1D1F]" />
+              </button>
+            </Link>
+            
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE]">
+              <Avatar className="h-6 w-6">
+                <AvatarFallback className="text-xs bg-[#159931] text-white">
+                  {authorName.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
+            </div>
           </div>
           
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">{task.title}</h1>
-            <div className="flex items-center gap-3 mt-2">
-              <Badge className={cn("text-xs", getLevelColor(task.level))}>
-                {task.level}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {task.category}
-              </Badge>
-            </div>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBookmark}
+              className={cn(
+                "h-9 w-9 rounded-full flex items-center justify-center transition-colors",
+                isBookmarked ? "bg-[#2D2D2D] text-white" : "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
+              )}
+              data-testid="button-bookmark"
+            >
+              <Star className="h-4 w-4" />
+            </button>
+            
+            <button
+              className="h-9 w-9 rounded-full flex items-center justify-center bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4] transition-colors"
+              data-testid="button-more"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+            
+            {user ? (
+              <Button 
+                className="gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl"
+                onClick={handleSubmitSolution}
+                data-testid="button-submit-solution"
+              >
+                <Send className="h-4 w-4" />
+                Отправить решение
+              </Button>
+            ) : (
+              <Link href="/auth">
+                <Button 
+                  className="gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl"
+                  data-testid="button-login-to-submit"
+                >
+                  Войдите, чтобы отправить
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
-        {/* Description */}
-        <Card className="p-6">
-          <div className="prose prose-sm max-w-none">
-            {(() => {
-              const lines = task.description?.split('\n') || [];
-              const elements: JSX.Element[] = [];
-              let i = 0;
-              
-              while (i < lines.length) {
-                const line = lines[i];
-                
-                if (line.startsWith('**') && line.endsWith('**')) {
-                  elements.push(
-                    <h3 key={i} className="font-semibold mt-4 mb-2 first:mt-0">
-                      {line.replace(/\*\*/g, '')}
-                    </h3>
-                  );
-                  i++;
-                } else if (line.startsWith('- ')) {
-                  const items: string[] = [];
-                  while (i < lines.length && lines[i].startsWith('- ')) {
-                    items.push(lines[i].substring(2));
-                    i++;
-                  }
-                  elements.push(
-                    <ul key={`ul-${i}`} className="ml-4 list-disc space-y-1">
-                      {items.map((item, idx) => <li key={idx}>{item}</li>)}
-                    </ul>
-                  );
-                } else if (/^\d+\./.test(line)) {
-                  const items: string[] = [];
-                  while (i < lines.length && /^\d+\./.test(lines[i])) {
-                    items.push(lines[i].replace(/^\d+\.\s*/, ''));
-                    i++;
-                  }
-                  elements.push(
-                    <ol key={`ol-${i}`} className="ml-4 list-decimal space-y-1">
-                      {items.map((item, idx) => <li key={idx}>{item}</li>)}
-                    </ol>
-                  );
-                } else if (line.trim()) {
-                  elements.push(<p key={i}>{line}</p>);
-                  i++;
-                } else {
-                  i++;
-                }
-              }
-              
-              return elements;
-            })()}
-          </div>
-        </Card>
+        {/* Task Title */}
+        <h1 className="text-2xl font-bold text-[#1D1D1F] mb-6 leading-tight">
+          {task.title}
+        </h1>
 
-        {/* Submit Solution */}
-        <Card className="p-6">
-          <h3 className="font-semibold mb-4">Отправить решение</h3>
-          
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Опишите ваше решение или добавьте ссылку на Figma/Behance..."
-              value={solution}
-              onChange={(e) => setSolution(e.target.value)}
-              className="min-h-[150px]"
-            />
-            
-            <div className="flex items-center gap-4">
-              <Button variant="outline" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Загрузить файлы
-              </Button>
-              
-              <div className="flex-1" />
-              
-              <Button disabled={!solution.trim()}>
-                Отправить решение
-              </Button>
+        {/* Meta Info Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <FolderOpen className="h-3 w-3" /> Сфера
+            </p>
+            <p className="text-sm font-medium text-[#1D1D1F]">{task.sphere || "Веб"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <Calendar className="h-3 w-3" /> Сложность
+            </p>
+            <p className={cn("text-sm font-medium", getLevelColor(task.level))}>{task.level}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <Briefcase className="h-3 w-3" /> Категория
+            </p>
+            <p className="text-sm font-medium text-[#1D1D1F]">{getCategoryLabel(task.category)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <Users className="h-3 w-3" /> Решено
+            </p>
+            <p className="text-sm font-medium text-[#1D1D1F]">
+              {task.solutionsCount || 0} / {(task.solutionsCount || 0) + 50} ({Math.round(((task.solutionsCount || 0) / ((task.solutionsCount || 0) + 50)) * 100)}%)
+            </p>
+          </div>
+        </div>
+
+        {/* Tags */}
+        {task.tags && task.tags.length > 0 && (
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <FolderOpen className="h-3 w-3" /> Теги
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {task.tags.map((tag: string, index: number) => (
+                <Badge 
+                  key={index} 
+                  variant="secondary" 
+                  className="text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0 hover:bg-[#DCDCE4] cursor-pointer"
+                >
+                  {tag}
+                </Badge>
+              ))}
             </div>
           </div>
-        </Card>
+        )}
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent p-0 h-auto gap-2 mb-6">
+            <TabsTrigger 
+              value="description"
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-medium transition-colors data-[state=active]:bg-[#2D2D2D] data-[state=active]:text-white",
+                "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
+              )}
+              data-testid="tab-description"
+            >
+              Описание задачи
+            </TabsTrigger>
+            <TabsTrigger 
+              value="solution"
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-medium transition-colors data-[state=active]:bg-[#2D2D2D] data-[state=active]:text-white",
+                "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
+              )}
+              data-testid="tab-solution"
+            >
+              Ваше решение
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="description" className="mt-0">
+            {/* Description Content */}
+            <div className="prose prose-sm max-w-none">
+              {parseDescription(task.description || "")}
+            </div>
+
+            {/* File Attachments */}
+            {attachments.length > 0 && (
+              <div className="mt-8">
+                <h3 className="font-semibold text-[#1D1D1F] mb-4">Ресурсы</h3>
+                <div className="flex gap-3 flex-wrap">
+                  {visibleAttachments.map((file: string, index: number) => (
+                    <div 
+                      key={index}
+                      className="w-40 h-28 bg-[#2D2D2D] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#3D3D3D] transition-colors relative overflow-hidden"
+                      data-testid={`attachment-${index}`}
+                    >
+                      <FileImage className="h-8 w-8 text-white/50" />
+                    </div>
+                  ))}
+                  {remainingCount > 0 && (
+                    <div 
+                      className="w-40 h-28 bg-[#2D2D2D] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#3D3D3D] transition-colors"
+                      data-testid="attachment-more"
+                    >
+                      <span className="text-white text-lg font-medium">+{remainingCount}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Mock attachments for display purposes */}
+            {attachments.length === 0 && (
+              <div className="mt-8">
+                <h3 className="font-semibold text-[#1D1D1F] mb-4">Ресурсы</h3>
+                <div className="flex gap-3 flex-wrap">
+                  {[1, 2, 3, 4].map((_, index) => (
+                    <div 
+                      key={index}
+                      className="w-40 h-28 bg-[#2D2D2D] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#3D3D3D] transition-colors"
+                      data-testid={`attachment-placeholder-${index}`}
+                    >
+                      <FileImage className="h-8 w-8 text-white/50" />
+                    </div>
+                  ))}
+                  <div 
+                    className="w-40 h-28 bg-[#2D2D2D] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#3D3D3D] transition-colors"
+                    data-testid="attachment-more-placeholder"
+                  >
+                    <span className="text-white text-lg font-medium">+7</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="solution" className="mt-0">
+            {!user ? (
+              <Card className="p-8 text-center bg-white border-0 shadow-sm">
+                <div className="text-muted-foreground mb-4">
+                  Войдите, чтобы отправить решение
+                </div>
+                <Link href="/auth">
+                  <Button className="bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl">
+                    Войти
+                  </Button>
+                </Link>
+              </Card>
+            ) : userSolution ? (
+              <Card className="p-6 bg-white border-0 shadow-sm">
+                <div className="flex items-center gap-2 text-[#159931] mb-4">
+                  <Check className="h-5 w-5" />
+                  <span className="font-medium">Ваше решение отправлено</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {userSolution.content}
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-8 text-center bg-white border-0 shadow-sm">
+                <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="font-semibold text-[#1D1D1F] mb-2">
+                  Вы ещё не отправили своё решение
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Загрузите свою работу, чтобы получить обратную связь
+                </p>
+                <Button 
+                  className="gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl"
+                  onClick={handleSubmitSolution}
+                  data-testid="button-upload-solution"
+                >
+                  <Send className="h-4 w-4" />
+                  Отправить решение
+                </Button>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </motion.div>
     </MainLayout>
   );
