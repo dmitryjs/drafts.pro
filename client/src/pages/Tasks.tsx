@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
-  ThumbsUp, 
-  ThumbsDown, 
+  ChevronUp,
+  ChevronDown,
   MessageCircle, 
   Star, 
   Search,
-  Grid3X3,
-  List,
-  ChevronRight
+  ChevronRight,
+  ArrowUpDown,
+  SlidersHorizontal
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useTasks } from "@/hooks/use-data";
+import { useTasks, useTaskInteraction } from "@/hooks/use-data";
 import { cn } from "@/lib/utils";
 import CreateTaskModal from "@/components/modals/CreateTaskModal";
 import { useToast } from "@/hooks/use-toast";
@@ -31,19 +31,25 @@ const categories = [
   { id: "3d", label: "3D", color: "bg-blue-500" },
 ];
 
-const statusFilters = [
-  { id: "solution", label: "Решение" },
-  { id: "review", label: "Проверка" },
-];
-
 const getLevelColor = (level: string) => {
-  switch (level) {
-    case "intern": return "text-blue-500";
-    case "junior": return "text-emerald-500";
-    case "middle": return "text-orange-500";
-    case "senior": return "text-red-500";
-    case "lead": return "text-purple-500";
+  switch (level.toLowerCase()) {
+    case "intern": return "text-[#666666]";
+    case "junior": return "text-[#159931]";
+    case "middle": return "text-[#FF9232]";
+    case "senior": return "text-[#325BFF]";
+    case "lead": return "text-[#FF32B7]";
     default: return "text-gray-500";
+  }
+};
+
+const getLevelLabel = (level: string) => {
+  switch (level.toLowerCase()) {
+    case "intern": return "Intern";
+    case "junior": return "Junior";
+    case "middle": return "Middle";
+    case "senior": return "Senior";
+    case "lead": return "Lead";
+    default: return level;
   }
 };
 
@@ -143,19 +149,37 @@ const mockTasks = [
 
 export default function Tasks() {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("solution");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { toast } = useToast();
   const { data: apiTasks, isLoading } = useTasks({
     category: selectedCategory !== "all" ? selectedCategory : undefined,
   });
+  const taskInteraction = useTaskInteraction();
   
   const handleCreateBattle = () => {
     toast({
       title: "Создание батла",
       description: "Функция создания батла будет доступна в ближайшее время",
     });
+  };
+  
+  const handleUpvote = (e: React.MouseEvent, taskId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    taskInteraction.mutate({ taskId, action: 'upvote' });
+  };
+  
+  const handleDownvote = (e: React.MouseEvent, taskId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    taskInteraction.mutate({ taskId, action: 'downvote' });
+  };
+  
+  const handleBookmark = (e: React.MouseEvent, taskId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    taskInteraction.mutate({ taskId, action: 'bookmark' });
+    toast({ title: "Добавлено в закладки" });
   };
 
   const tasks = apiTasks?.length ? apiTasks : mockTasks;
@@ -200,81 +224,60 @@ export default function Tasks() {
       onCreateTask={() => setIsCreateModalOpen(true)}
       onCreateBattle={handleCreateBattle}
     >
-      {/* Filters Row */}
+      {/* Category Tabs */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {/* Status filters */}
-        {statusFilters.map((status) => (
-          <Button
-            key={status.id}
-            variant={selectedStatus === status.id ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setSelectedStatus(status.id)}
-            className="rounded-full text-sm"
-            data-testid={`filter-status-${status.id}`}
-          >
-            {status.label}
-          </Button>
-        ))}
-        
-        <div className="h-6 w-px bg-border mx-1" />
-        
-        {/* Category filters */}
         {categories.map((cat) => (
-          <Button
+          <button
             key={cat.id}
-            variant={selectedCategory === cat.id ? "secondary" : "outline"}
-            size="sm"
             onClick={() => setSelectedCategory(cat.id)}
             className={cn(
-              "rounded-full text-sm gap-1.5",
-              selectedCategory === cat.id && cat.id === "all" && "bg-[#2D2D2D] text-white hover:bg-[#2D2D2D]/90"
+              "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              selectedCategory === cat.id 
+                ? cat.id === "all" 
+                  ? "bg-[#2D2D2D] text-white" 
+                  : "bg-[#2D2D2D] text-white"
+                : "bg-[#E8E8EE] text-[#1D1D1F]"
             )}
             data-testid={`filter-category-${cat.id}`}
           >
-            {cat.id !== "all" && (
-              <span className={cn("w-2 h-2 rounded-full", getCategoryDot(cat.id))} />
-            )}
-            {cat.label}
-          </Button>
+            <span className="flex items-center gap-1.5">
+              {cat.id !== "all" && selectedCategory !== cat.id && (
+                <span className={cn("w-2 h-2 rounded-full", getCategoryDot(cat.id))} />
+              )}
+              {cat.label}
+            </span>
+          </button>
         ))}
       </div>
 
-      {/* Search and View Toggle */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search Bar - Full Width with Sort/Filter */}
+      <div className="flex items-center gap-2 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" fill="currentColor" />
           <Input
             placeholder="Поиск задач"
-            className="pl-9 bg-white border-border rounded-lg"
+            className="pl-12 h-11 bg-white border-border rounded-xl w-full"
+            style={{ height: '44px' }}
             data-testid="input-search-tasks"
           />
         </div>
         
-        <div className="flex items-center gap-1 ml-auto">
-          <Button
-            variant={viewMode === "grid" ? "secondary" : "ghost"}
-            size="icon"
-            onClick={() => setViewMode("grid")}
-            data-testid="view-grid"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            size="icon"
-            onClick={() => setViewMode("list")}
-            data-testid="view-list"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
+        <button
+          className="h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors"
+          data-testid="button-sort"
+        >
+          <ArrowUpDown className="h-5 w-5" />
+        </button>
+        <button
+          className="h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors"
+          data-testid="button-filter"
+        >
+          <SlidersHorizontal className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Tasks Grid - 2 columns */}
-      <div className={cn(
-        "gap-4",
-        viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2" : "flex flex-col"
-      )}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-48 bg-white animate-pulse rounded-xl" />
@@ -296,24 +299,28 @@ export default function Tasks() {
                   className="p-5 hover:shadow-md transition-shadow cursor-pointer bg-white border-0 shadow-sm"
                   data-testid={`task-card-${task.id}`}
                 >
-                  {/* Author and Category */}
+                  {/* Author Avatar + Name -> Arrow -> Category Tag */}
                   <div className="flex items-center gap-2 mb-3">
-                    <div className={cn("w-2.5 h-2.5 rounded-full", getCategoryDot(task.category))} />
-                    <span className="text-sm text-muted-foreground">{task.author}</span>
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                        {task.author?.charAt(0) || "A"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-[#1D1D1F] font-medium">{task.author}</span>
                     <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground capitalize">
+                    <Badge variant="secondary" className="text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0">
                       {task.category === "product" ? "Продукты" : 
                        task.category === "uxui" ? "UX/UI" :
                        task.category === "graphic" ? "Графический" :
                        task.category === "3d" ? "3D" : "Кейсы"}
-                    </span>
+                    </Badge>
                     <span className={cn("ml-auto text-sm font-medium", getLevelColor(task.level))}>
-                      {task.level.charAt(0).toUpperCase() + task.level.slice(1)}
+                      {getLevelLabel(task.level)}
                     </span>
                   </div>
                   
                   {/* Title */}
-                  <h3 className="font-semibold text-base leading-snug mb-2 line-clamp-2">
+                  <h3 className="font-semibold text-base leading-snug mb-2 line-clamp-2 text-[#1D1D1F]">
                     {task.title}
                   </h3>
                   
@@ -322,37 +329,46 @@ export default function Tasks() {
                     {task.description}
                   </p>
                   
-                  {/* Stats */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center">
-                        <ThumbsUp className="h-3.5 w-3.5" />
-                      </div>
-                      <span>{task.likes}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center">
-                        <ThumbsDown className="h-3.5 w-3.5" />
-                      </div>
-                      <span>{task.dislikes}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <div className="w-7 h-7 rounded-md bg-muted flex items-center justify-center">
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </div>
-                      <span>{task.comments}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-7 w-7"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
+                  {/* Interactive Action Buttons - Reddit style */}
+                  <div className="flex items-center gap-2">
+                    {/* Upvote */}
+                    <button
+                      onClick={(e) => handleUpvote(e, task.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] transition-colors"
+                      data-testid={`button-upvote-${task.id}`}
                     >
-                      <Star className="h-4 w-4 text-muted-foreground" />
-                    </Button>
+                      <ChevronUp className="h-4 w-4" fill="currentColor" strokeWidth={3} />
+                      <span className="text-sm font-medium">{task.likes || 0}</span>
+                    </button>
+                    
+                    {/* Downvote */}
+                    <button
+                      onClick={(e) => handleDownvote(e, task.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] transition-colors"
+                      data-testid={`button-downvote-${task.id}`}
+                    >
+                      <ChevronDown className="h-4 w-4" fill="currentColor" strokeWidth={3} />
+                      <span className="text-sm font-medium">{task.dislikes || 0}</span>
+                    </button>
+                    
+                    {/* Comments */}
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-[#E8E8EE] transition-colors"
+                      data-testid={`button-comments-${task.id}`}
+                    >
+                      <MessageCircle className="h-4 w-4 text-muted-foreground" fill="currentColor" />
+                      <span className="text-sm text-muted-foreground">{task.comments || 0}</span>
+                    </button>
+                    
+                    {/* Bookmark */}
+                    <button
+                      onClick={(e) => handleBookmark(e, task.id)}
+                      className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center hover:bg-[#E8E8EE] transition-colors"
+                      data-testid={`button-bookmark-${task.id}`}
+                    >
+                      <Star className="h-4 w-4 text-muted-foreground" fill="currentColor" />
+                    </button>
                   </div>
                 </Card>
               </Link>

@@ -140,3 +140,23 @@ export function useUserSolutions(userId: number) {
     enabled: !!userId,
   });
 }
+
+// --- Task Interactions (Likes/Dislikes/Bookmarks) ---
+export function useTaskInteraction() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ taskId, action }: { taskId: number; action: 'upvote' | 'downvote' | 'bookmark' }) => {
+      const res = await fetch(`/api/tasks/${taskId}/interact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) throw new Error("Failed to interact with task");
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.tasks.list.path] });
+    },
+  });
+}

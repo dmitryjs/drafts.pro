@@ -244,6 +244,32 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  // Task Interactions (upvote/downvote/bookmark)
+  app.post('/api/tasks/:taskId/interact', async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      const { action } = req.body as { action: 'upvote' | 'downvote' | 'bookmark' };
+      
+      const task = await storage.getTaskById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: "Задача не найдена" });
+      }
+      
+      // For now, return a success response
+      // In a full implementation, this would track user-specific interactions in DB
+      res.json({ 
+        success: true, 
+        action, 
+        taskId,
+        message: action === 'upvote' ? 'Голос учтён' : 
+                 action === 'downvote' ? 'Голос учтён' : 'Добавлено в закладки'
+      });
+    } catch (err) {
+      console.error('Error interacting with task:', err);
+      res.status(500).json({ message: "Ошибка при взаимодействии с задачей" });
+    }
+  });
+
   // ============================================
   // TASK SOLUTIONS (РЕШЕНИЯ)
   // ============================================

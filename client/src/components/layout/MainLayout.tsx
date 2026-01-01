@@ -74,49 +74,17 @@ export default function MainLayout({
     <div className="min-h-screen bg-[#F9F9F9] flex">
       {/* Left Sidebar - 238px white */}
       <aside className="w-[238px] bg-white border-r border-border flex flex-col h-screen sticky top-0">
-        {/* Logo */}
+        {/* Logo - 160x16 */}
         <div className="h-14 px-4 flex items-center border-b border-border">
           <Link href="/">
             <img 
               src={logoPath} 
               alt="Drafts" 
-              className="h-6 cursor-pointer"
+              className="cursor-pointer"
+              style={{ width: '160px', height: '16px' }}
             />
           </Link>
         </div>
-
-        {/* Create button with dropdown */}
-        {showCreateButton && (
-          <div className="p-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="w-full justify-between" data-testid="button-create">
-                  <span className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Создать
-                  </span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[200px]">
-                <DropdownMenuItem 
-                  className="cursor-pointer py-2.5"
-                  onClick={onCreateTask || onCreateClick}
-                >
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  Задача
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="cursor-pointer py-2.5"
-                  onClick={onCreateBattle || onCreateClick}
-                >
-                  <Swords className="mr-2 h-4 w-4" />
-                  Батл
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
 
         {/* Navigation */}
         <nav className="flex-1 px-3 space-y-0.5">
@@ -136,7 +104,7 @@ export default function MainLayout({
                   )}
                   data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  <Icon className="h-4 w-4" strokeWidth={1.5} />
+                  <Icon className="h-4 w-4" fill="currentColor" strokeWidth={0} />
                   <span>{item.label}</span>
                 </div>
               </Link>
@@ -213,14 +181,43 @@ export default function MainLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header - white background */}
-        <header className="h-14 border-b border-border bg-white sticky top-0 z-40 flex items-center justify-end px-4 gap-2">
+        <header className="h-14 border-b border-border bg-white sticky top-0 z-40 flex items-center justify-end px-4 gap-3">
+          {/* Create button with dropdown - only for authenticated users */}
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="gap-2" data-testid="button-create">
+                  <Plus className="h-4 w-4" fill="currentColor" />
+                  Создать
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuItem 
+                  className="cursor-pointer py-2.5"
+                  onClick={onCreateTask || onCreateClick}
+                >
+                  <LayoutGrid className="mr-2 h-4 w-4" fill="currentColor" />
+                  Задача
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="cursor-pointer py-2.5"
+                  onClick={onCreateBattle || onCreateClick}
+                >
+                  <Swords className="mr-2 h-4 w-4" fill="currentColor" />
+                  Батл
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          
           <Button 
             variant="ghost" 
             size="icon"
             className="text-muted-foreground hover:text-foreground"
             data-testid="button-notifications"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-5 w-5" fill="currentColor" />
           </Button>
           
           <DropdownMenu>
