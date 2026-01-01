@@ -244,6 +244,81 @@ export const mentorReviews = pgTable("mentor_reviews", {
 });
 
 // ============================================
+// XP & GAMIFICATION SYSTEM
+// ============================================
+
+export const XpActionType = {
+  TASK_SOLVED: "task_solved",
+  TASK_ACCEPTED: "task_accepted",
+  BATTLE_WIN: "battle_win",
+  BATTLE_SECOND: "battle_second",
+  BATTLE_THIRD: "battle_third",
+  BATTLE_PARTICIPATION: "battle_participation",
+  BATTLE_CREATED: "battle_created",
+  TASK_CREATED: "task_created",
+  DAILY_LOGIN: "daily_login",
+  PROFILE_COMPLETED: "profile_completed",
+  FIRST_SOLUTION: "first_solution",
+  STREAK_BONUS: "streak_bonus",
+} as const;
+
+export const XpRewards = {
+  TASK_SOLVED: 50,
+  TASK_ACCEPTED: 100,
+  BATTLE_WIN: 300,
+  BATTLE_SECOND: 150,
+  BATTLE_THIRD: 75,
+  BATTLE_PARTICIPATION: 25,
+  BATTLE_CREATED: 50,
+  TASK_CREATED: 75,
+  DAILY_LOGIN: 10,
+  PROFILE_COMPLETED: 100,
+  FIRST_SOLUTION: 50,
+  STREAK_BONUS: 25,
+} as const;
+
+export const LevelThresholds = [
+  { level: 1, xpRequired: 0, title: "Новичок" },
+  { level: 2, xpRequired: 100, title: "Начинающий" },
+  { level: 3, xpRequired: 300, title: "Ученик" },
+  { level: 4, xpRequired: 600, title: "Практикант" },
+  { level: 5, xpRequired: 1000, title: "Дизайнер" },
+  { level: 6, xpRequired: 1500, title: "Опытный дизайнер" },
+  { level: 7, xpRequired: 2200, title: "Продвинутый" },
+  { level: 8, xpRequired: 3000, title: "Мастер" },
+  { level: 9, xpRequired: 4000, title: "Эксперт" },
+  { level: 10, xpRequired: 5500, title: "Гуру" },
+  { level: 11, xpRequired: 7500, title: "Легенда" },
+  { level: 12, xpRequired: 10000, title: "Элита" },
+] as const;
+
+export const userXp = pgTable("user_xp", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull().unique(),
+  totalXp: integer("total_xp").default(0),
+  currentLevel: integer("current_level").default(1),
+  dailyStreak: integer("daily_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  lastDailyLogin: timestamp("last_daily_login"),
+  tasksCompleted: integer("tasks_completed").default(0),
+  battlesWon: integer("battles_won").default(0),
+  battlesParticipated: integer("battles_participated").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const xpTransactions = pgTable("xp_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  actionType: text("action_type").notNull(),
+  xpAmount: integer("xp_amount").notNull(),
+  description: text("description"),
+  relatedTaskId: integer("related_task_id").references(() => tasks.id),
+  relatedBattleId: integer("related_battle_id").references(() => battles.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ============================================
 // INSERT SCHEMAS
 // ============================================
 
@@ -259,6 +334,8 @@ export const insertMentorSchema = createInsertSchema(mentors).omit({ id: true, c
 export const insertMentorSlotSchema = createInsertSchema(mentorSlots).omit({ id: true });
 export const insertMentorBookingSchema = createInsertSchema(mentorBookings).omit({ id: true, createdAt: true });
 export const insertMentorReviewSchema = createInsertSchema(mentorReviews).omit({ id: true, createdAt: true });
+export const insertUserXpSchema = createInsertSchema(userXp).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertXpTransactionSchema = createInsertSchema(xpTransactions).omit({ id: true, createdAt: true });
 
 // ============================================
 // TYPES
@@ -299,3 +376,9 @@ export type InsertMentorBooking = z.infer<typeof insertMentorBookingSchema>;
 
 export type MentorReview = typeof mentorReviews.$inferSelect;
 export type InsertMentorReview = z.infer<typeof insertMentorReviewSchema>;
+
+export type UserXp = typeof userXp.$inferSelect;
+export type InsertUserXp = z.infer<typeof insertUserXpSchema>;
+
+export type XpTransaction = typeof xpTransactions.$inferSelect;
+export type InsertXpTransaction = z.infer<typeof insertXpTransactionSchema>;
