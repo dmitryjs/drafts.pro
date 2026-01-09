@@ -216,6 +216,24 @@ const normalizeTestData = (data: TestData): NormalizedQuestion[] => {
   return questions;
 };
 
+interface AIResumeAnalysis {
+  score: number;
+  feedbackItems: FeedbackItem[];
+}
+
+interface AIRecommendations {
+  overallFeedback: string;
+  recommendations: {
+    title: string;
+    description: string;
+    priority: "high" | "medium" | "low";
+  }[];
+  suggestedResources: {
+    title: string;
+    type: string;
+  }[];
+}
+
 export default function Assessment() {
   const [step, setStep] = useState<AssessmentStep>("upload");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -226,11 +244,33 @@ export default function Assessment() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [testQuestions, setTestQuestions] = useState<NormalizedQuestion[]>([]);
   const [isLoadingTest, setIsLoadingTest] = useState(false);
+  const [resumeAnalysis, setResumeAnalysis] = useState<AIResumeAnalysis | null>(null);
+  const [testRecommendations, setTestRecommendations] = useState<AIRecommendations | null>(null);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const analyzeResumeWithAI = async (file: File) => {
+    try {
+      const text = await file.text();
+      const response = await fetch("/api/analyze-resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeText: text, sphere: selectedSphere || "product" }),
+      });
+      if (response.ok) {
+        const analysis = await response.json();
+        setResumeAnalysis(analysis);
+      }
+    } catch (error) {
+      console.error("Failed to analyze resume:", error);
+    }
+  };
+
   useEffect(() => {
-    if (step === "processing") {
+    if (step === "processing" && resumeFile) {
       setProcessingProgress(0);
+      analyzeResumeWithAI(resumeFile);
+      
       const interval = setInterval(() => {
         setProcessingProgress(prev => {
           if (prev >= 100) {
@@ -238,12 +278,12 @@ export default function Assessment() {
             setTimeout(() => setStep("sphere"), 500);
             return 100;
           }
-          return prev + Math.random() * 15 + 5;
+          return prev + Math.random() * 8 + 3;
         });
-      }, 300);
+      }, 400);
       return () => clearInterval(interval);
     }
-  }, [step]);
+  }, [step, resumeFile]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -304,10 +344,47 @@ export default function Assessment() {
     setAnswers(prev => ({ ...prev, [questionId]: answerIndex }));
   };
 
+  const fetchTestRecommendations = async (score: number) => {
+    setIsLoadingRecommendations(true);
+    try {
+      const questions = testQuestions.length > 0 ? testQuestions : mockQuestions.map(q => ({
+        id: q.id.toString(),
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        type: "mcq" as const
+      }));
+      
+      const incorrectTopics = questions
+        .filter(q => answers[q.id] !== q.correctAnswer)
+        .map(q => q.question);
+      
+      const response = await fetch("/api/test-recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sphere: selectedSphere || "product",
+          testScore: score,
+          incorrectTopics,
+        }),
+      });
+      
+      if (response.ok) {
+        const recommendations = await response.json();
+        setTestRecommendations(recommendations);
+      }
+    } catch (error) {
+      console.error("Failed to fetch recommendations:", error);
+    }
+    setIsLoadingRecommendations(false);
+  };
+
   const handleNextQuestion = () => {
     if (currentQuestion < testQuestions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
     } else {
+      const score = calculateScore();
+      fetchTestRecommendations(score);
       setStep("results");
     }
   };
@@ -683,13 +760,14 @@ export default function Assessment() {
 
   const renderResultsStep = () => {
     const testScore = calculateScore();
-    const resumeScore = 78;
+    const resumeScore = resumeAnalysis?.score ?? 78;
     const finalScore = Math.round((testScore * 0.6) + (resumeScore * 0.4));
     const grade = getGrade(finalScore);
     const gradeRu = getGradeRu(finalScore);
 
-    const positiveItems = mockFeedbackItems.filter(item => item.isPositive);
-    const negativeItems = mockFeedbackItems.filter(item => !item.isPositive);
+    const feedbackItems = resumeAnalysis?.feedbackItems ?? mockFeedbackItems;
+    const positiveItems = feedbackItems.filter(item => item.isPositive);
+    const negativeItems = feedbackItems.filter(item => !item.isPositive);
 
     return (
       <motion.div
@@ -849,6 +927,61 @@ export default function Assessment() {
             </div>
           </Card>
 
+          {(isLoadingRecommendations || testRecommendations) && (
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4">Рекомендации по развитию</h3>
+              
+              {isLoadingRecommendations ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Генерируем рекомендации...</span>
+                </div>
+              ) : testRecommendations ? (
+                <div className="space-y-6">
+                  {testRecommendations.overallFeedback && (
+                    <p className="text-muted-foreground bg-muted/30 p-4 rounded-xl">
+                      {testRecommendations.overallFeedback}
+                    </p>
+                  )}
+                  
+                  {testRecommendations.recommendations.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground">Что изучить:</h4>
+                      {testRecommendations.recommendations.map((rec, index) => (
+                        <div key={index} className="flex gap-3 p-3 bg-muted/20 rounded-xl">
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                            rec.priority === "high" ? "bg-red-500" :
+                            rec.priority === "medium" ? "bg-amber-500" : "bg-blue-500"
+                          }`} />
+                          <div>
+                            <p className="font-medium">{rec.title}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {testRecommendations.suggestedResources.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium text-muted-foreground">Полезные ресурсы:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {testRecommendations.suggestedResources.map((resource, index) => (
+                          <span 
+                            key={index} 
+                            className="px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
+                          >
+                            {resource.title} ({resource.type})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </Card>
+          )}
+
           <div className="flex gap-3">
             <Button
               variant="outline"
@@ -859,6 +992,8 @@ export default function Assessment() {
                 setSelectedSphere(null);
                 setCurrentQuestion(0);
                 setAnswers({});
+                setResumeAnalysis(null);
+                setTestRecommendations(null);
               }}
               data-testid="button-restart-assessment"
             >

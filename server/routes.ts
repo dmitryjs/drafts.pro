@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { analyzeResume, generateTestRecommendations } from "./polzaAI";
 
 async function seedDatabase() {
   const existingTasks = await storage.getTasks();
@@ -582,6 +583,50 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Failed to load test file:", err);
       res.status(500).json({ message: "Failed to load test" });
+    }
+  });
+
+  // ============================================
+  // POLZA AI - АНАЛИЗ РЕЗЮМЕ
+  // ============================================
+
+  app.post("/api/analyze-resume", async (req, res) => {
+    try {
+      const { resumeText, sphere } = req.body;
+      
+      if (!resumeText || typeof resumeText !== "string") {
+        return res.status(400).json({ message: "Resume text is required" });
+      }
+      
+      const analysis = await analyzeResume(resumeText, sphere || "product");
+      res.json(analysis);
+    } catch (err) {
+      console.error("Error analyzing resume:", err);
+      res.status(500).json({ message: "Failed to analyze resume" });
+    }
+  });
+
+  // ============================================
+  // POLZA AI - РЕКОМЕНДАЦИИ ПОСЛЕ ТЕСТА
+  // ============================================
+
+  app.post("/api/test-recommendations", async (req, res) => {
+    try {
+      const { sphere, testScore, incorrectTopics } = req.body;
+      
+      if (typeof testScore !== "number") {
+        return res.status(400).json({ message: "Test score is required" });
+      }
+      
+      const recommendations = await generateTestRecommendations(
+        sphere || "product",
+        testScore,
+        incorrectTopics || []
+      );
+      res.json(recommendations);
+    } catch (err) {
+      console.error("Error generating recommendations:", err);
+      res.status(500).json({ message: "Failed to generate recommendations" });
     }
   });
 
