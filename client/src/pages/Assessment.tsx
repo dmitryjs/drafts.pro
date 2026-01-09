@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Upload, 
@@ -10,10 +10,10 @@ import {
   Clock, 
   X,
   AlertTriangle,
-  ThumbsUp,
-  ThumbsDown,
   BarChart3,
-  Globe
+  Globe,
+  Loader2,
+  XCircle
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type AssessmentStep = "upload" | "sphere" | "testing" | "results";
+type AssessmentStep = "upload" | "processing" | "sphere" | "testing" | "results";
+
+interface FeedbackItem {
+  title: string;
+  description: string;
+  isPositive: boolean;
+}
 
 interface Sphere {
   id: string;
@@ -107,6 +113,49 @@ const mockQuestions = [
   }
 ];
 
+const mockFeedbackItems: FeedbackItem[] = [
+  {
+    title: "Профессиональное саммари",
+    description: "Отличное саммари: указана роль, опыт и ключевые компетенции. Рекрутер сразу видит роль, опыт, домены и подходы — именно то, что нужно для быстрого скрининга",
+    isPositive: true
+  },
+  {
+    title: "Фокус на достижениях",
+    description: "Указаны конкретные метрики: «Улучшил показатели Retention на 8%», «Conversion Rate вырос с 45% до 62%». Классическая формула Действие+Результат+Метрика — рекрутеры любят такие цифры",
+    isPositive: true
+  },
+  {
+    title: "Ссылки и ресурсы",
+    description: "Есть LinkedIn, Dribbble, Dprofile — полный набор для дизайнера. Рекрутеры сразу перейдут по ссылкам проверить кейсы, это ускоряет процесс отбора",
+    isPositive: true
+  },
+  {
+    title: "Контактная информация",
+    description: "Полные контакты: email, LinkedIn, Dribbble. Укажи город/релокацию — для международных вакансий это важно",
+    isPositive: true
+  },
+  {
+    title: "Опыт работы",
+    description: "Обратная хронология, конкретика: компании, роли, сроки. Понятно, чем занимался и в каких продуктах",
+    isPositive: true
+  },
+  {
+    title: "Количественные показатели",
+    description: "Много метрик: «Retention +8%», «Conversion 45→62%», «D7 Retention +12%». Отлично показывает влияние на бизнес",
+    isPositive: true
+  },
+  {
+    title: "Навыки анимации",
+    description: "Не указаны навыки работы с анимацией интерфейсов. Добавь After Effects, Principle или Framer Motion — это востребованный навык",
+    isPositive: false
+  },
+  {
+    title: "Юзабилити-тестирование",
+    description: "Нет упоминания методов исследований: интервью, A/B тесты, юзабилити. Добавь примеры проведённых исследований",
+    isPositive: false
+  }
+];
+
 export default function Assessment() {
   const [step, setStep] = useState<AssessmentStep>("upload");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -114,7 +163,25 @@ export default function Assessment() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (step === "processing") {
+      setProcessingProgress(0);
+      const interval = setInterval(() => {
+        setProcessingProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setTimeout(() => setStep("sphere"), 500);
+            return 100;
+          }
+          return prev + Math.random() * 15 + 5;
+        });
+      }, 300);
+      return () => clearInterval(interval);
+    }
+  }, [step]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -257,12 +324,59 @@ export default function Assessment() {
         <Button
           className="w-full mt-6 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl"
           disabled={!resumeFile}
-          onClick={() => setStep("sphere")}
+          onClick={() => setStep("processing")}
           data-testid="button-next-to-sphere"
         >
           Далее
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
+      </Card>
+    </motion.div>
+  );
+
+  const renderProcessingStep = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="w-full max-w-[600px]"
+    >
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold mb-2">Оценка навыков</h1>
+        <p className="text-muted-foreground">
+          Анализируем ваше резюме
+        </p>
+      </div>
+
+      <Card className="p-8">
+        <div className="border-2 border-dashed rounded-xl p-10 text-center border-primary bg-primary/5">
+          <div className="w-20 h-20 mx-auto mb-4 bg-muted rounded-xl flex items-center justify-center">
+            <FileText className="h-10 w-10 text-primary" />
+          </div>
+
+          <p className="font-medium text-foreground mb-1">
+            {resumeFile?.name}
+          </p>
+          <p className="text-sm text-muted-foreground mb-6">
+            PDF, DOCX, до 10 МБ
+          </p>
+
+          <Button
+            disabled
+            className="bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl pointer-events-none"
+            data-testid="button-processing"
+          >
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Формирую оценку...
+          </Button>
+        </div>
+
+        <div className="mt-6">
+          <Progress value={Math.min(processingProgress, 100)} className="h-2" />
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            {Math.min(Math.round(processingProgress), 100)}% завершено
+          </p>
+        </div>
       </Card>
     </motion.div>
   );
@@ -429,20 +543,12 @@ export default function Assessment() {
 
   const renderResultsStep = () => {
     const testScore = calculateScore();
-    const resumeScore = 78; // Mock resume score
+    const resumeScore = 78;
     const finalScore = Math.round((testScore * 0.6) + (resumeScore * 0.4));
     const grade = getGrade(finalScore);
 
-    const strengths = [
-      "Хорошее понимание дизайн-систем",
-      "Знание принципов UX исследований",
-      "Владение инструментами прототипирования"
-    ];
-
-    const weaknesses = [
-      "Требуется углубление в анимацию интерфейсов",
-      "Рекомендуется изучить методы юзабилити-тестирования"
-    ];
+    const positiveItems = mockFeedbackItems.filter(item => item.isPositive);
+    const negativeItems = mockFeedbackItems.filter(item => !item.isPositive);
 
     return (
       <motion.div
@@ -512,37 +618,29 @@ export default function Assessment() {
             </div>
           </Card>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <ThumbsUp className="h-5 w-5 text-emerald-600" />
-                <h3 className="font-semibold">Сильные стороны</h3>
-              </div>
-              <ul className="space-y-2">
-                {strengths.map((strength, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                    <span>{strength}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <ThumbsDown className="h-5 w-5 text-amber-600" />
-                <h3 className="font-semibold">Зоны роста</h3>
-              </div>
-              <ul className="space-y-2">
-                {weaknesses.map((weakness, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <span>{weakness}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </div>
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4">Детальная информация</h3>
+            <div className="space-y-4">
+              {positiveItems.map((item, index) => (
+                <div key={index} className="flex gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
+                  <CheckCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">{item.title}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+              {negativeItems.map((item, index) => (
+                <div key={index} className="flex gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
+                  <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">{item.title}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
 
           <div className="flex gap-3">
             <Button
@@ -576,6 +674,7 @@ export default function Assessment() {
       <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
         <AnimatePresence mode="wait">
           {step === "upload" && renderUploadStep()}
+          {step === "processing" && renderProcessingStep()}
           {step === "sphere" && renderSphereStep()}
           {step === "testing" && renderTestingStep()}
           {step === "results" && renderResultsStep()}
