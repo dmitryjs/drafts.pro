@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import { analyzeResume, generateTestRecommendations } from "./polzaAI";
+import { analyzeResume, generateTestRecommendations, evaluateFreeTextAnswers } from "./polzaAI";
 
 async function seedDatabase() {
   const existingTasks = await storage.getTasks();
@@ -627,6 +627,26 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Error generating recommendations:", err);
       res.status(500).json({ message: "Failed to generate recommendations" });
+    }
+  });
+
+  // ============================================
+  // POLZA AI - ОЦЕНКА ОТКРЫТЫХ ВОПРОСОВ
+  // ============================================
+
+  app.post("/api/evaluate-free-text", async (req, res) => {
+    try {
+      const { sphere, answers } = req.body;
+      
+      if (!answers || !Array.isArray(answers)) {
+        return res.status(400).json({ message: "Answers array is required" });
+      }
+      
+      const evaluation = await evaluateFreeTextAnswers(sphere || "product", answers);
+      res.json(evaluation);
+    } catch (err) {
+      console.error("Error evaluating free text:", err);
+      res.status(500).json({ message: "Failed to evaluate answers" });
     }
   });
 
