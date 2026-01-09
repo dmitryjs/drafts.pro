@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   ThumbsUp,
   ThumbsDown,
-  BarChart3
+  BarChart3,
+  Globe
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -493,12 +494,18 @@ export default function Assessment() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-muted/30 rounded-xl">
-                <div className="text-sm text-muted-foreground mb-1">🇷🇺 Россия</div>
+                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <span className="w-4 h-3 rounded-sm bg-gradient-to-b from-white via-blue-500 to-red-500 flex-shrink-0" />
+                  Россия
+                </div>
                 <div className="text-xl font-bold">{getSalaryRange(grade, "ru")}</div>
                 <div className="text-xs text-muted-foreground mt-1">в месяц</div>
               </div>
               <div className="p-4 bg-muted/30 rounded-xl">
-                <div className="text-sm text-muted-foreground mb-1">🌍 Зарубежом</div>
+                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Globe className="h-4 w-4 flex-shrink-0" />
+                  Зарубежом
+                </div>
                 <div className="text-xl font-bold">{getSalaryRange(grade, "abroad")}</div>
                 <div className="text-xs text-muted-foreground mt-1">в месяц</div>
               </div>
