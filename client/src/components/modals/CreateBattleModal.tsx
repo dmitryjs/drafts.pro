@@ -75,35 +75,31 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent hideCloseButton className="max-w-3xl">
-        <DialogHeader>
+        <DialogHeader className="relative">
           <DialogTitle className="text-xl font-bold">Создать новый батл</DialogTitle>
+          <DialogClose asChild>
+            <button 
+              className="absolute right-0 top-0 text-muted-foreground hover:text-foreground"
+              data-testid="button-close-modal"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </DialogClose>
         </DialogHeader>
 
         {/* Info Banner */}
-        <Card className="p-4 bg-[#F9F9F9] border-0">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="font-medium text-[#1D1D1F] mb-1">Как работает создание батла?</h3>
-              <p className="text-sm text-muted-foreground">
-                Выберите работу, загрузите её на батл, дождитесь оппонента и пройдите модерацию. После этого начнётся голосование.
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <span className="text-sm text-muted-foreground">Победитель получит:</span>
-                <Badge className="bg-[#E8E8EE] text-[#1D1D1F] border-0">
-                  +XP 50
-                </Badge>
-              </div>
-            </div>
-            <DialogClose asChild>
-              <button 
-                className="text-muted-foreground hover:text-foreground"
-                data-testid="button-close-info"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </DialogClose>
+        <div className="pt-2">
+          <h3 className="font-medium text-[#1D1D1F] mb-1">Как работает создание батла?</h3>
+          <p className="text-sm text-muted-foreground">
+            Выберите работу, загрузите её на батл, дождитесь оппонента и пройдите модерацию. После этого начнётся голосование.
+          </p>
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-sm text-muted-foreground">Победитель получит:</span>
+            <Badge className="bg-[#E8E8EE] text-[#1D1D1F] border-0">
+              +XP 50
+            </Badge>
           </div>
-        </Card>
+        </div>
 
         {/* Two Column Layout */}
         <div className="grid grid-cols-2 gap-6 mt-4">
