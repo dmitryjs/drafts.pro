@@ -1,11 +1,12 @@
 import { db } from "./db";
 import {
-  users, profiles, tasks, taskSolutions, battles, battleEntries, battleVotes,
+  users, profiles, tasks, taskSolutions, taskDrafts, battles, battleEntries, battleVotes,
   skillAssessments, assessmentQuestions, mentors, mentorSlots, mentorBookings, mentorReviews,
   type User, type InsertUser,
   type Profile, type InsertProfile,
   type Task, type InsertTask,
   type TaskSolution, type InsertTaskSolution,
+  type TaskDraft, type InsertTaskDraft,
   type Battle, type InsertBattle,
   type BattleEntry, type InsertBattleEntry,
   type BattleVote, type InsertBattleVote,
@@ -76,6 +77,13 @@ export interface IStorage {
   // Reviews
   getMentorReviews(mentorId: number): Promise<MentorReview[]>;
   createReview(review: InsertMentorReview): Promise<MentorReview>;
+
+  // Task Drafts
+  getTaskDrafts(profileId: number): Promise<TaskDraft[]>;
+  getTaskDraft(id: number): Promise<TaskDraft | undefined>;
+  createTaskDraft(draft: InsertTaskDraft): Promise<TaskDraft>;
+  updateTaskDraft(id: number, data: Partial<InsertTaskDraft>): Promise<TaskDraft>;
+  deleteTaskDraft(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -297,6 +305,30 @@ export class DatabaseStorage implements IStorage {
   async createReview(review: InsertMentorReview): Promise<MentorReview> {
     const [newReview] = await db.insert(mentorReviews).values(review).returning();
     return newReview;
+  }
+
+  // Task Drafts
+  async getTaskDrafts(profileId: number): Promise<TaskDraft[]> {
+    return await db.select().from(taskDrafts).where(eq(taskDrafts.profileId, profileId));
+  }
+
+  async getTaskDraft(id: number): Promise<TaskDraft | undefined> {
+    const [draft] = await db.select().from(taskDrafts).where(eq(taskDrafts.id, id));
+    return draft;
+  }
+
+  async createTaskDraft(draft: InsertTaskDraft): Promise<TaskDraft> {
+    const [newDraft] = await db.insert(taskDrafts).values(draft).returning();
+    return newDraft;
+  }
+
+  async updateTaskDraft(id: number, data: Partial<InsertTaskDraft>): Promise<TaskDraft> {
+    const [updated] = await db.update(taskDrafts).set(data).where(eq(taskDrafts.id, id)).returning();
+    return updated;
+  }
+
+  async deleteTaskDraft(id: number): Promise<void> {
+    await db.delete(taskDrafts).where(eq(taskDrafts.id, id));
   }
 }
 

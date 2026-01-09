@@ -112,6 +112,21 @@ export const taskSolutions = pgTable("task_solutions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Task Drafts
+export const taskDrafts = pgTable("task_drafts", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  title: text("title"),
+  description: text("description"),
+  category: text("category"),
+  level: text("level"),
+  tags: text("tags").array(),
+  spheres: text("spheres").array(),
+  attachments: jsonb("attachments"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // ============================================
 // DESIGN BATTLES (ДИЗАЙН БАТЛЫ)
 // ============================================
@@ -326,6 +341,7 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, createdAt: true });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, solutionsCount: true });
 export const insertTaskSolutionSchema = createInsertSchema(taskSolutions).omit({ id: true, createdAt: true });
+export const insertTaskDraftSchema = createInsertSchema(taskDrafts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertBattleSchema = createInsertSchema(battles).omit({ id: true, createdAt: true, participantsCount: true });
 export const insertBattleEntrySchema = createInsertSchema(battleEntries).omit({ id: true, createdAt: true, votesCount: true, rank: true });
 export const insertBattleVoteSchema = createInsertSchema(battleVotes).omit({ id: true, createdAt: true });
@@ -352,6 +368,9 @@ export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 export type TaskSolution = typeof taskSolutions.$inferSelect;
 export type InsertTaskSolution = z.infer<typeof insertTaskSolutionSchema>;
+
+export type TaskDraft = typeof taskDrafts.$inferSelect;
+export type InsertTaskDraft = z.infer<typeof insertTaskDraftSchema>;
 
 export type Battle = typeof battles.$inferSelect;
 export type InsertBattle = z.infer<typeof insertBattleSchema>;

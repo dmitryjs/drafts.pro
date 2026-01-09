@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 async function seedDatabase() {
   const existingTasks = await storage.getTasks();
@@ -272,6 +272,51 @@ export async function registerRoutes(
     } catch (err) {
       console.error('Error interacting with task:', err);
       res.status(500).json({ message: "Ошибка при взаимодействии с задачей" });
+    }
+  });
+
+  // ============================================
+  // TASK DRAFTS (ЧЕРНОВИКИ)
+  // ============================================
+
+  app.get('/api/drafts', isAuthenticated, async (req: any, res) => {
+    try {
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile) {
+        return res.json([]);
+      }
+      const drafts = await storage.getTaskDrafts(profile.id);
+      res.json(drafts);
+    } catch (err) {
+      console.error('Error fetching drafts:', err);
+      res.status(500).json({ message: "Ошибка при получении черновиков" });
+    }
+  });
+
+  app.post('/api/drafts', isAuthenticated, async (req: any, res) => {
+    try {
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile) {
+        return res.status(401).json({ message: "Профиль не найден" });
+      }
+      const draft = await storage.createTaskDraft({
+        profileId: profile.id,
+        ...req.body,
+      });
+      res.status(201).json(draft);
+    } catch (err) {
+      console.error('Error creating draft:', err);
+      res.status(500).json({ message: "Ошибка при сохранении черновика" });
+    }
+  });
+
+  app.delete('/api/drafts/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteTaskDraft(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error('Error deleting draft:', err);
+      res.status(500).json({ message: "Ошибка при удалении черновика" });
     }
   });
 
