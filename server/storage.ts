@@ -1,12 +1,14 @@
 import { db } from "./db";
 import {
-  users, profiles, tasks, taskSolutions, taskDrafts, battles, battleEntries, battleVotes,
+  users, profiles, tasks, taskSolutions, taskDrafts, taskVotes, taskFavorites, battles, battleEntries, battleVotes,
   skillAssessments, assessmentQuestions, mentors, mentorSlots, mentorBookings, mentorReviews,
   type User, type InsertUser,
   type Profile, type InsertProfile,
   type Task, type InsertTask,
   type TaskSolution, type InsertTaskSolution,
   type TaskDraft, type InsertTaskDraft,
+  type TaskVote, type InsertTaskVote,
+  type TaskFavorite, type InsertTaskFavorite,
   type Battle, type InsertBattle,
   type BattleEntry, type InsertBattleEntry,
   type BattleVote, type InsertBattleVote,
@@ -16,7 +18,7 @@ import {
   type MentorBooking, type InsertMentorBooking,
   type MentorReview, type InsertMentorReview,
 } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -84,6 +86,18 @@ export interface IStorage {
   createTaskDraft(draft: InsertTaskDraft): Promise<TaskDraft>;
   updateTaskDraft(id: number, data: Partial<InsertTaskDraft>): Promise<TaskDraft>;
   deleteTaskDraft(id: number): Promise<void>;
+
+  // Task Votes
+  getTaskVote(taskId: number, userId: number): Promise<TaskVote | undefined>;
+  getTaskVoteCounts(taskId: number): Promise<{ likes: number; dislikes: number }>;
+  upsertTaskVote(taskId: number, userId: number, value: number): Promise<TaskVote>;
+  deleteTaskVote(taskId: number, userId: number): Promise<void>;
+
+  // Task Favorites
+  getTaskFavorite(taskId: number, userId: number): Promise<TaskFavorite | undefined>;
+  getUserFavorites(userId: number): Promise<TaskFavorite[]>;
+  addTaskFavorite(taskId: number, userId: number): Promise<TaskFavorite>;
+  removeTaskFavorite(taskId: number, userId: number): Promise<void>;
 
   // Admin: Battles
   updateBattle(id: number, data: Partial<InsertBattle>): Promise<Battle>;
@@ -338,6 +352,61 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTaskDraft(id: number): Promise<void> {
     await db.delete(taskDrafts).where(eq(taskDrafts.id, id));
+  }
+
+  // Task Votes
+  async getTaskVote(taskId: number, userId: number): Promise<TaskVote | undefined> {
+    const [vote] = await db.select().from(taskVotes)
+      .where(and(eq(taskVotes.taskId, taskId), eq(taskVotes.userId, userId)));
+    return vote;
+  }
+
+  async getTaskVoteCounts(taskId: number): Promise<{ likes: number; dislikes: number }> {
+    const votes = await db.select().from(taskVotes).where(eq(taskVotes.taskId, taskId));
+    const likes = votes.filter(v => v.value === 1).length;
+    const dislikes = votes.filter(v => v.value === -1).length;
+    return { likes, dislikes };
+  }
+
+  async upsertTaskVote(taskId: number, userId: number, value: number): Promise<TaskVote> {
+    const existing = await this.getTaskVote(taskId, userId);
+    if (existing) {
+      const [updated] = await db.update(taskVotes)
+        .set({ value })
+        .where(eq(taskVotes.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [vote] = await db.insert(taskVotes).values({ taskId, userId, value }).returning();
+    return vote;
+  }
+
+  async deleteTaskVote(taskId: number, userId: number): Promise<void> {
+    await db.delete(taskVotes)
+      .where(and(eq(taskVotes.taskId, taskId), eq(taskVotes.userId, userId)));
+  }
+
+  // Task Favorites
+  async getTaskFavorite(taskId: number, userId: number): Promise<TaskFavorite | undefined> {
+    const [fav] = await db.select().from(taskFavorites)
+      .where(and(eq(taskFavorites.taskId, taskId), eq(taskFavorites.userId, userId)));
+    return fav;
+  }
+
+  async getUserFavorites(userId: number): Promise<TaskFavorite[]> {
+    return await db.select().from(taskFavorites).where(eq(taskFavorites.userId, userId));
+  }
+
+  async addTaskFavorite(taskId: number, userId: number): Promise<TaskFavorite> {
+    const existing = await this.getTaskFavorite(taskId, userId);
+    if (existing) return existing;
+    const [fav] = await db.insert(taskFavorites).values({ taskId, userId }).returning();
+    return fav;
+  }
+
+  async removeTaskFavorite(taskId: number, userId: number): Promise<void> {
+    await db.delete(taskFavorites)
+      .where(and(eq(taskFavorites.taskId, taskId), eq(taskFavorites.userId, userId)));
   }
 
   // Admin: Battles

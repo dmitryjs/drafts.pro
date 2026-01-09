@@ -112,6 +112,23 @@ export const taskSolutions = pgTable("task_solutions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Task Votes (like/dislike system)
+export const taskVotes = pgTable("task_votes", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").references(() => tasks.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  value: integer("value").notNull(), // 1 for like, -1 for dislike
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Task Favorites
+export const taskFavorites = pgTable("task_favorites", {
+  id: serial("id").primaryKey(),
+  taskId: integer("task_id").references(() => tasks.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Task Drafts
 export const taskDrafts = pgTable("task_drafts", {
   id: serial("id").primaryKey(),
@@ -342,6 +359,8 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true,
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, solutionsCount: true });
 export const insertTaskSolutionSchema = createInsertSchema(taskSolutions).omit({ id: true, createdAt: true });
 export const insertTaskDraftSchema = createInsertSchema(taskDrafts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTaskVoteSchema = createInsertSchema(taskVotes).omit({ id: true, createdAt: true });
+export const insertTaskFavoriteSchema = createInsertSchema(taskFavorites).omit({ id: true, createdAt: true });
 export const insertBattleSchema = createInsertSchema(battles).omit({ id: true, createdAt: true, participantsCount: true });
 export const insertBattleEntrySchema = createInsertSchema(battleEntries).omit({ id: true, createdAt: true, votesCount: true, rank: true });
 export const insertBattleVoteSchema = createInsertSchema(battleVotes).omit({ id: true, createdAt: true });
@@ -371,6 +390,12 @@ export type InsertTaskSolution = z.infer<typeof insertTaskSolutionSchema>;
 
 export type TaskDraft = typeof taskDrafts.$inferSelect;
 export type InsertTaskDraft = z.infer<typeof insertTaskDraftSchema>;
+
+export type TaskVote = typeof taskVotes.$inferSelect;
+export type InsertTaskVote = z.infer<typeof insertTaskVoteSchema>;
+
+export type TaskFavorite = typeof taskFavorites.$inferSelect;
+export type InsertTaskFavorite = z.infer<typeof insertTaskFavoriteSchema>;
 
 export type Battle = typeof battles.$inferSelect;
 export type InsertBattle = z.infer<typeof insertBattleSchema>;

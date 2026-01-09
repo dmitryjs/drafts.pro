@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ChevronUp,
-  ChevronDown,
-  MessageCircle, 
+  ThumbsUp,
+  ThumbsDown,
   Star, 
   Search,
   ChevronRight,
   ArrowUpDown,
-  SlidersHorizontal
+  SlidersHorizontal,
+  X,
+  Check
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -17,10 +18,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useTasks, useTaskInteraction } from "@/hooks/use-data";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useTasks } from "@/hooks/use-data";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import CreateTaskModal from "@/components/modals/CreateTaskModal";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const categories = [
   { id: "all", label: "Все темы", color: "bg-[#2D2D2D] text-white" },
@@ -147,46 +158,96 @@ const mockTasks = [
   },
 ];
 
+const grades = [
+  { id: "all", label: "Все грейды" },
+  { id: "Intern", label: "Intern" },
+  { id: "Junior", label: "Junior" },
+  { id: "Middle", label: "Middle" },
+  { id: "Senior", label: "Senior" },
+  { id: "Lead", label: "Lead" },
+];
+
+const sortOptions = [
+  { id: "newest", label: "Сначала новые" },
+  { id: "oldest", label: "Сначала старые" },
+  { id: "solutions_desc", label: "Больше решений" },
+  { id: "solutions_asc", label: "Меньше решений" },
+];
+
 export default function Tasks() {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedGrade, setSelectedGrade] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
   const { data: apiTasks, isLoading } = useTasks({
     category: selectedCategory !== "all" ? selectedCategory : undefined,
   });
-  const taskInteraction = useTaskInteraction();
-  
-  const handleCreateBattle = () => {
-    toast({
-      title: "Создание батла",
-      description: "Функция создания батла будет доступна в ближайшее время",
-    });
-  };
-  
-  const handleUpvote = (e: React.MouseEvent, taskId: number) => {
+
+  const voteMutation = useMutation({
+    mutationFn: async ({ taskId, value }: { taskId: number; value: 1 | -1 }) => {
+      return apiRequest("POST", `/api/tasks/${taskId}/vote`, { value });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
+  });
+
+  const favoriteMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      return apiRequest("POST", `/api/tasks/${taskId}/favorite`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Обновлено" });
+    },
+  });
+
+  const handleVote = (e: React.MouseEvent, taskId: number, value: 1 | -1) => {
     e.preventDefault();
     e.stopPropagation();
-    taskInteraction.mutate({ taskId, action: 'upvote' });
+    if (!user) {
+      toast({ title: "Войдите, чтобы голосовать" });
+      return;
+    }
+    voteMutation.mutate({ taskId, value });
   };
-  
-  const handleDownvote = (e: React.MouseEvent, taskId: number) => {
+
+  const handleFavorite = (e: React.MouseEvent, taskId: number) => {
     e.preventDefault();
     e.stopPropagation();
-    taskInteraction.mutate({ taskId, action: 'downvote' });
-  };
-  
-  const handleBookmark = (e: React.MouseEvent, taskId: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    taskInteraction.mutate({ taskId, action: 'bookmark' });
-    toast({ title: "Добавлено в закладки" });
+    if (!user) {
+      toast({ title: "Войдите, чтобы добавить в избранное" });
+      return;
+    }
+    favoriteMutation.mutate(taskId);
   };
 
   const tasks = apiTasks?.length ? apiTasks : mockTasks;
 
-  const filteredTasks = tasks.filter((task: any) => {
+  let filteredTasks = tasks.filter((task: any) => {
     if (selectedCategory !== "all" && task.category !== selectedCategory) return false;
+    if (selectedGrade !== "all" && task.level?.toLowerCase() !== selectedGrade.toLowerCase()) return false;
     return true;
+  });
+
+  // Sort tasks
+  filteredTasks = [...filteredTasks].sort((a: any, b: any) => {
+    switch (sortBy) {
+      case "oldest":
+        return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      case "solutions_desc":
+        return (b.solutionsCount || 0) - (a.solutionsCount || 0);
+      case "solutions_asc":
+        return (a.solutionsCount || 0) - (b.solutionsCount || 0);
+      case "newest":
+      default:
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    }
   });
 
   const rightPanel = (
@@ -222,7 +283,6 @@ export default function Tasks() {
     <MainLayout 
       rightPanel={rightPanel}
       onCreateTask={() => setIsCreateModalOpen(true)}
-      onCreateBattle={handleCreateBattle}
     >
       {/* Category Tabs */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -260,14 +320,37 @@ export default function Tasks() {
           />
         </div>
         
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors"
+              data-testid="button-sort"
+            >
+              <ArrowUpDown className="h-5 w-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {sortOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.id}
+                onClick={() => setSortBy(option.id)}
+                className="cursor-pointer"
+              >
+                <span className="flex-1">{option.label}</span>
+                {sortBy === option.id && <Check className="h-4 w-4 text-[#FF6030]" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
         <button
-          className="h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors"
-          data-testid="button-sort"
-        >
-          <ArrowUpDown className="h-5 w-5" />
-        </button>
-        <button
-          className="h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors"
+          onClick={() => setIsFilterOpen(true)}
+          className={cn(
+            "h-11 w-11 rounded-full flex items-center justify-center transition-colors",
+            selectedGrade !== "all" 
+              ? "bg-[#FF6030] text-white" 
+              : "text-muted-foreground hover:bg-[#E8E8EE]"
+          )}
           data-testid="button-filter"
         >
           <SlidersHorizontal className="h-5 w-5" />
@@ -327,43 +410,33 @@ export default function Tasks() {
                     {task.description}
                   </p>
                   
-                  {/* Interactive Action Buttons - Neutral-Primary style */}
+                  {/* Interactive Action Buttons - Like/Dislike and Favorite */}
                   <div className="flex items-center gap-2">
-                    {/* Upvote */}
+                    {/* Like */}
                     <button
-                      onClick={(e) => handleUpvote(e, task.id)}
+                      onClick={(e) => handleVote(e, task.id, 1)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
-                      data-testid={`button-upvote-${task.id}`}
+                      data-testid={`button-like-${task.id}`}
                     >
-                      <ChevronUp className="h-4 w-4" />
+                      <ThumbsUp className="h-4 w-4" />
                       <span className="text-sm font-medium">{task.likes || 0}</span>
                     </button>
                     
-                    {/* Downvote */}
+                    {/* Dislike */}
                     <button
-                      onClick={(e) => handleDownvote(e, task.id)}
+                      onClick={(e) => handleVote(e, task.id, -1)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
-                      data-testid={`button-downvote-${task.id}`}
+                      data-testid={`button-dislike-${task.id}`}
                     >
-                      <ChevronDown className="h-4 w-4" />
+                      <ThumbsDown className="h-4 w-4" />
                       <span className="text-sm font-medium">{task.dislikes || 0}</span>
                     </button>
                     
-                    {/* Comments */}
+                    {/* Favorite */}
                     <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
-                      data-testid={`button-comments-${task.id}`}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      <span className="text-sm">{task.comments || 0}</span>
-                    </button>
-                    
-                    {/* Bookmark */}
-                    <button
-                      onClick={(e) => handleBookmark(e, task.id)}
+                      onClick={(e) => handleFavorite(e, task.id)}
                       className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center bg-[#E8E8EE] border border-border hover:bg-[#DCDCE4] transition-colors"
-                      data-testid={`button-bookmark-${task.id}`}
+                      data-testid={`button-favorite-${task.id}`}
                     >
                       <Star className="h-4 w-4 text-[#1D1D1F]" />
                     </button>
@@ -379,6 +452,60 @@ export default function Tasks() {
         open={isCreateModalOpen} 
         onOpenChange={setIsCreateModalOpen} 
       />
+
+      {/* Filter Sheet Overlay */}
+      <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+        <SheetContent side="right" className="w-80 bg-white">
+          <SheetHeader className="mb-6">
+            <SheetTitle className="text-lg font-semibold">Фильтры</SheetTitle>
+          </SheetHeader>
+          
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-sm font-medium mb-3">Грейд</h4>
+              <div className="space-y-2">
+                {grades.map((grade) => (
+                  <button
+                    key={grade.id}
+                    onClick={() => setSelectedGrade(grade.id)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm transition-colors",
+                      selectedGrade === grade.id
+                        ? "bg-[#FF6030] text-white"
+                        : "bg-[#F4F4F5] text-[#1D1D1F] hover:bg-[#E8E8EE]"
+                    )}
+                    data-testid={`filter-grade-${grade.id}`}
+                  >
+                    {grade.label}
+                    {selectedGrade === grade.id && <Check className="h-4 w-4" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex gap-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setSelectedGrade("all");
+                  setIsFilterOpen(false);
+                }}
+                data-testid="button-reset-filters"
+              >
+                Сбросить
+              </Button>
+              <Button
+                className="flex-1 bg-[#FF6030] hover:bg-[#E55525]"
+                onClick={() => setIsFilterOpen(false)}
+                data-testid="button-apply-filters"
+              >
+                Применить
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </MainLayout>
   );
 }

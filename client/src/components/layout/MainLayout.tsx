@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutGrid,
@@ -28,6 +28,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { Profile } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import logoPath from "@assets/Logo_black_1767028620121.png";
+import CreateBattleModal from "@/components/modals/CreateBattleModal";
+import CreateTaskModal from "@/components/modals/CreateTaskModal";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -56,6 +58,8 @@ export default function MainLayout({
 }: MainLayoutProps) {
   const [location] = useLocation();
   const { user, isLoading, logout } = useAuth();
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isBattleModalOpen, setIsBattleModalOpen] = useState(false);
   
   const { data: profile } = useQuery<Profile>({
     queryKey: ['/api/profiles', user?.id],
@@ -141,14 +145,20 @@ export default function MainLayout({
                 <DropdownMenuContent align="end" className="w-[200px]">
                   <DropdownMenuItem 
                     className="cursor-pointer py-2.5"
-                    onClick={onCreateTask || onCreateClick}
+                    onClick={() => {
+                      if (onCreateTask) onCreateTask();
+                      else setIsTaskModalOpen(true);
+                    }}
                   >
                     <LayoutGrid className="mr-2 h-4 w-4" />
                     Задача
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     className="cursor-pointer py-2.5"
-                    onClick={onCreateBattle || onCreateClick}
+                    onClick={() => {
+                      if (onCreateBattle) onCreateBattle();
+                      else setIsBattleModalOpen(true);
+                    }}
                   >
                     <Swords className="mr-2 h-4 w-4" />
                     Батл
@@ -237,6 +247,16 @@ export default function MainLayout({
           )}
         </div>
       </div>
+
+      {/* Global Modals */}
+      <CreateTaskModal 
+        open={isTaskModalOpen} 
+        onOpenChange={setIsTaskModalOpen} 
+      />
+      <CreateBattleModal 
+        open={isBattleModalOpen} 
+        onOpenChange={setIsBattleModalOpen} 
+      />
     </div>
   );
 }

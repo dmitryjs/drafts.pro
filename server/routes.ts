@@ -250,29 +250,99 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
-  // Task Interactions (upvote/downvote/bookmark)
-  app.post('/api/tasks/:taskId/interact', async (req, res) => {
+  // Task Votes
+  app.post('/api/tasks/:taskId/vote', isAuthenticated, async (req: any, res) => {
     try {
       const taskId = parseInt(req.params.taskId);
-      const { action } = req.body as { action: 'upvote' | 'downvote' | 'bookmark' };
-      
-      const task = await storage.getTaskById(taskId);
-      if (!task) {
-        return res.status(404).json({ message: "Задача не найдена" });
+      const { value } = req.body as { value: 1 | -1 };
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile || !profile.userId) {
+        return res.status(401).json({ message: "Необходима авторизация" });
       }
-      
-      // For now, return a success response
-      // In a full implementation, this would track user-specific interactions in DB
-      res.json({ 
-        success: true, 
-        action, 
-        taskId,
-        message: action === 'upvote' ? 'Голос учтён' : 
-                 action === 'downvote' ? 'Голос учтён' : 'Добавлено в закладки'
-      });
+      const existingVote = await storage.getTaskVote(taskId, profile.userId);
+      if (existingVote && existingVote.value === value) {
+        await storage.deleteTaskVote(taskId, profile.userId);
+        const counts = await storage.getTaskVoteCounts(taskId);
+        return res.json({ ...counts, userVote: null });
+      }
+      await storage.upsertTaskVote(taskId, profile.userId, value);
+      const counts = await storage.getTaskVoteCounts(taskId);
+      res.json({ ...counts, userVote: value });
     } catch (err) {
-      console.error('Error interacting with task:', err);
-      res.status(500).json({ message: "Ошибка при взаимодействии с задачей" });
+      console.error('Error voting on task:', err);
+      res.status(500).json({ message: "Ошибка при голосовании" });
+    }
+  });
+
+  app.get('/api/tasks/:taskId/vote', async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      const counts = await storage.getTaskVoteCounts(taskId);
+      let userVote = null;
+      if (req.user?.claims?.sub) {
+        const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+        if (profile?.userId) {
+          const vote = await storage.getTaskVote(taskId, profile.userId);
+          userVote = vote?.value || null;
+        }
+      }
+      res.json({ ...counts, userVote });
+    } catch (err) {
+      console.error('Error getting task votes:', err);
+      res.status(500).json({ message: "Ошибка при получении голосов" });
+    }
+  });
+
+  // Task Favorites
+  app.post('/api/tasks/:taskId/favorite', isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile || !profile.userId) {
+        return res.status(401).json({ message: "Необходима авторизация" });
+      }
+      const existing = await storage.getTaskFavorite(taskId, profile.userId);
+      if (existing) {
+        await storage.removeTaskFavorite(taskId, profile.userId);
+        return res.json({ isFavorite: false });
+      }
+      await storage.addTaskFavorite(taskId, profile.userId);
+      res.json({ isFavorite: true });
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      res.status(500).json({ message: "Ошибка при добавлении в избранное" });
+    }
+  });
+
+  app.get('/api/tasks/:taskId/favorite', async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      let isFavorite = false;
+      if (req.user?.claims?.sub) {
+        const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+        if (profile?.userId) {
+          const fav = await storage.getTaskFavorite(taskId, profile.userId);
+          isFavorite = !!fav;
+        }
+      }
+      res.json({ isFavorite });
+    } catch (err) {
+      console.error('Error checking favorite status:', err);
+      res.status(500).json({ message: "Ошибка при проверке избранного" });
+    }
+  });
+
+  app.get('/api/favorites', isAuthenticated, async (req: any, res) => {
+    try {
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile || !profile.userId) {
+        return res.json([]);
+      }
+      const favorites = await storage.getUserFavorites(profile.userId);
+      res.json(favorites);
+    } catch (err) {
+      console.error('Error fetching favorites:', err);
+      res.status(500).json({ message: "Ошибка при получении избранного" });
     }
   });
 
