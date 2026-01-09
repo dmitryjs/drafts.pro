@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Maximize2, Tag, Briefcase, Paperclip } from "lucide-react";
+import { X, Tag, Briefcase, Paperclip } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,6 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
   const [level, setLevel] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleSubmit = () => {
     console.log({ category, level, title, description });
@@ -66,29 +65,19 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         hideCloseButton
-        className={`${isFullscreen ? 'max-w-4xl h-[90vh]' : 'max-w-2xl'} flex flex-col gap-0 p-0`}
+        className="max-w-4xl h-[90vh] flex flex-col gap-0 p-0"
       >
         <DialogHeader className="px-6 py-4 border-b flex-row items-center justify-between gap-4">
           <DialogTitle className="text-lg font-semibold">Создать задачу</DialogTitle>
-          <div className="flex items-center gap-1">
+          <DialogClose asChild>
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              data-testid="button-fullscreen"
+              data-testid="button-close-modal"
             >
-              <Maximize2 className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </Button>
-            <DialogClose asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                data-testid="button-close-modal"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
-          </div>
+          </DialogClose>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto p-6 space-y-6">
