@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, authStorage } from "./replit_integrations/auth";
 import { analyzeResume, generateTestRecommendations, evaluateFreeTextAnswers } from "./polzaAI";
 
 async function seedDatabase() {
@@ -648,6 +648,149 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Error evaluating free text:", err);
       res.status(500).json({ message: "Failed to evaluate answers" });
+    }
+  });
+
+  // ============================================
+  // ADMIN ROUTES (СУПЕР АДМИН)
+  // ============================================
+
+  // Check if current user is admin
+  app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const isUserAdmin = await authStorage.isAdmin(userId);
+      res.json({ isAdmin: isUserAdmin });
+    } catch (err) {
+      console.error("Error checking admin status:", err);
+      res.status(500).json({ message: "Failed to check admin status" });
+    }
+  });
+
+  // Get all users (admin only)
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const users = await authStorage.getAllUsers();
+      res.json(users);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Set admin status (admin only)
+  app.patch("/api/admin/users/:userId/admin", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { isAdmin: setAdmin } = req.body;
+      const user = await authStorage.setAdmin(userId, setAdmin === true);
+      res.json(user);
+    } catch (err) {
+      console.error("Error setting admin status:", err);
+      res.status(500).json({ message: "Failed to set admin status" });
+    }
+  });
+
+  // Get all battles for admin (including pending verification)
+  app.get("/api/admin/battles", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const battles = await storage.getBattles({});
+      res.json(battles);
+    } catch (err) {
+      console.error("Error fetching battles:", err);
+      res.status(500).json({ message: "Failed to fetch battles" });
+    }
+  });
+
+  // Update battle status (admin only)
+  app.patch("/api/admin/battles/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const battle = await storage.updateBattle(parseInt(id), req.body);
+      res.json(battle);
+    } catch (err) {
+      console.error("Error updating battle:", err);
+      res.status(500).json({ message: "Failed to update battle" });
+    }
+  });
+
+  // Delete battle (admin only)
+  app.delete("/api/admin/battles/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteBattle(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting battle:", err);
+      res.status(500).json({ message: "Failed to delete battle" });
+    }
+  });
+
+  // Get admin dashboard stats
+  app.get("/api/admin/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const [usersCount, tasks, battles, assessmentQuestions] = await Promise.all([
+        authStorage.getUsersCount(),
+        storage.getTasks(),
+        storage.getBattles({}),
+        storage.getAssessmentQuestions("product")
+      ]);
+      
+      res.json({
+        usersCount,
+        tasksCount: tasks.length,
+        battlesCount: battles.length,
+        questionsCount: assessmentQuestions.length,
+        activeBattles: battles.filter((b: any) => b.status === "active").length,
+        pendingBattles: battles.filter((b: any) => b.status === "upcoming").length,
+      });
+    } catch (err) {
+      console.error("Error fetching stats:", err);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // Get all assessment questions (admin only)
+  app.get("/api/admin/questions", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { sphere } = req.query;
+      const questions = await storage.getAssessmentQuestions(sphere as string || "product");
+      res.json(questions);
+    } catch (err) {
+      console.error("Error fetching questions:", err);
+      res.status(500).json({ message: "Failed to fetch questions" });
+    }
+  });
+
+  // Create assessment question (admin only)
+  app.post("/api/admin/questions", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const question = await storage.createAssessmentQuestion(req.body);
+      res.status(201).json(question);
+    } catch (err) {
+      console.error("Error creating question:", err);
+      res.status(500).json({ message: "Failed to create question" });
+    }
+  });
+
+  // Update assessment question (admin only)
+  app.patch("/api/admin/questions/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const question = await storage.updateAssessmentQuestion(parseInt(req.params.id), req.body);
+      res.json(question);
+    } catch (err) {
+      console.error("Error updating question:", err);
+      res.status(500).json({ message: "Failed to update question" });
+    }
+  });
+
+  // Delete assessment question (admin only)
+  app.delete("/api/admin/questions/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteAssessmentQuestion(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting question:", err);
+      res.status(500).json({ message: "Failed to delete question" });
     }
   });
 

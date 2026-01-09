@@ -1,22 +1,36 @@
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Edit2, Zap, Info, FileText, ChevronRight } from "lucide-react";
+import { Edit2, Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw } from "lucide-react";
 import { SiTelegram, SiBehance, SiDribbble } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import MainLayout from "@/components/layout/MainLayout";
 import { getLevelInfo, XP_REWARDS } from "@shared/xp";
 import type { TaskDraft } from "@shared/schema";
 
 export default function Profile() {
   const [, navigate] = useLocation();
+  const [isEditing, setIsEditing] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [telegramLink, setTelegramLink] = useState("");
+  const [behanceLink, setBehanceLink] = useState("");
+  const [dribbbleLink, setDribbbleLink] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const mockUserXp = 450;
   const levelInfo = getLevelInfo(mockUserXp);
 
@@ -25,10 +39,23 @@ export default function Profile() {
   });
 
   const draftsCount = drafts?.length || 0;
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setAvatarUrl(url);
+    }
+  };
+
+  const handleDeleteAvatar = () => {
+    setAvatarUrl(null);
+  };
+
+  const hasSocialLinks = telegramLink || behanceLink || dribbbleLink;
   
   const rightPanel = (
     <div className="space-y-6">
-      {/* Drafts Section */}
       <div>
         <button
           onClick={() => navigate("/drafts")}
@@ -83,36 +110,91 @@ export default function Profile() {
         transition={{ duration: 0.3 }}
         className="max-w-2xl space-y-8"
       >
-        <div className="flex items-start gap-6">
-          <div className="relative">
-            <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
-              <AvatarImage src="" />
-              <AvatarFallback className="text-2xl bg-primary/10 text-primary">ИП</AvatarFallback>
-            </Avatar>
-            <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full h-8 w-8 shadow-md">
-              <Edit2 className="h-3 w-3" />
-            </Button>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">Иван Петров</h1>
-            <p className="text-muted-foreground">Product Designer</p>
-            <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                <SiTelegram className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                <SiBehance className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                <SiDribbble className="h-4 w-4" />
-              </Button>
+        <Card className="relative">
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute top-4 right-4 h-9 w-9 border-border/50"
+            onClick={() => setIsEditing(!isEditing)}
+            data-testid="button-edit-profile"
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+
+          <CardContent className="p-6">
+            <div className="flex items-start gap-6">
+              <div className="relative">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                  data-testid="input-avatar-file"
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="cursor-pointer" data-testid="button-avatar-menu">
+                      <Avatar className="w-24 h-24 border-2 border-border/30">
+                        <AvatarImage src={avatarUrl || ""} />
+                        <AvatarFallback className="text-2xl bg-muted text-muted-foreground">ИП</AvatarFallback>
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {avatarUrl ? (
+                      <>
+                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Заменить
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleDeleteAvatar} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Удалить
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Загрузить аватарку
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold">Иван Петров</h1>
+                <p className="text-muted-foreground">Product Designer</p>
+                {hasSocialLinks && (
+                  <div className="flex gap-2 mt-3">
+                    {telegramLink && (
+                      <a href={telegramLink} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                          <SiTelegram className="h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                    {behanceLink && (
+                      <a href={behanceLink} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                          <SiBehance className="h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                    {dribbbleLink && (
+                      <a href={dribbbleLink} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                          <SiDribbble className="h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
         
-        <Separator />
-        
-        {/* XP & Level Section */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-lg">Опыт и уровень</h2>
@@ -153,13 +235,11 @@ export default function Profile() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-6">
-                {/* Level Badge */}
                 <div className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#FF6030] to-[#FF8F70] text-white">
                   <span className="text-2xl font-bold">{levelInfo.level}</span>
                   <span className="text-xs opacity-90">уровень</span>
                 </div>
                 
-                {/* Progress Info */}
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -203,7 +283,7 @@ export default function Profile() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Имя</Label>
-                  <Input defaultValue="Иван Петров" />
+                  <Input defaultValue="Иван Петров" disabled={!isEditing} />
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
@@ -212,20 +292,68 @@ export default function Profile() {
               </div>
               <div className="space-y-2">
                 <Label>О себе</Label>
-                <Input defaultValue="Product Designer с 5-летним опытом" />
+                <Input defaultValue="Product Designer с 5-летним опытом" disabled={!isEditing} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Компания</Label>
-                  <Input defaultValue="Яндекс" />
+                  <Input defaultValue="Яндекс" disabled={!isEditing} />
                 </div>
                 <div className="space-y-2">
                   <Label>Город</Label>
-                  <Input defaultValue="Москва" />
+                  <Input defaultValue="Москва" disabled={!isEditing} />
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Социальные сети</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <SiTelegram className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      placeholder="https://t.me/username" 
+                      value={telegramLink}
+                      onChange={(e) => setTelegramLink(e.target.value)}
+                      disabled={!isEditing}
+                      data-testid="input-telegram-link"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <SiBehance className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      placeholder="https://behance.net/username" 
+                      value={behanceLink}
+                      onChange={(e) => setBehanceLink(e.target.value)}
+                      disabled={!isEditing}
+                      data-testid="input-behance-link"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <SiDribbble className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      placeholder="https://dribbble.com/username" 
+                      value={dribbbleLink}
+                      onChange={(e) => setDribbbleLink(e.target.value)}
+                      disabled={!isEditing}
+                      data-testid="input-dribbble-link"
+                    />
+                  </div>
                 </div>
               </div>
               
-              <Button className="w-full mt-4">Сохранить изменения</Button>
+              {isEditing && (
+                <Button className="w-full mt-4" onClick={() => setIsEditing(false)}>
+                  Сохранить изменения
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>

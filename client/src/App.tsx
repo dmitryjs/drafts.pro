@@ -15,6 +15,7 @@ import Assessment from "@/pages/Assessment";
 import Profile from "@/pages/Profile";
 import Drafts from "@/pages/Drafts";
 import Settings from "@/pages/Settings";
+import Admin from "@/pages/Admin";
 
 function Router() {
   return (
@@ -37,6 +38,11 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/settings" component={Settings} />
+      <Route path="/admin">
+        <ProtectedRoute>
+          <Admin />
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

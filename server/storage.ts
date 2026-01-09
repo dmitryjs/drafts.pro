@@ -84,6 +84,15 @@ export interface IStorage {
   createTaskDraft(draft: InsertTaskDraft): Promise<TaskDraft>;
   updateTaskDraft(id: number, data: Partial<InsertTaskDraft>): Promise<TaskDraft>;
   deleteTaskDraft(id: number): Promise<void>;
+
+  // Admin: Battles
+  updateBattle(id: number, data: Partial<InsertBattle>): Promise<Battle>;
+  deleteBattle(id: number): Promise<void>;
+
+  // Admin: Assessment Questions
+  createAssessmentQuestion(data: any): Promise<any>;
+  updateAssessmentQuestion(id: number, data: any): Promise<any>;
+  deleteAssessmentQuestion(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -329,6 +338,31 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTaskDraft(id: number): Promise<void> {
     await db.delete(taskDrafts).where(eq(taskDrafts.id, id));
+  }
+
+  // Admin: Battles
+  async updateBattle(id: number, data: Partial<InsertBattle>): Promise<Battle> {
+    const [updated] = await db.update(battles).set(data).where(eq(battles.id, id)).returning();
+    return updated;
+  }
+
+  async deleteBattle(id: number): Promise<void> {
+    await db.delete(battles).where(eq(battles.id, id));
+  }
+
+  // Admin: Assessment Questions
+  async createAssessmentQuestion(data: any): Promise<any> {
+    const [question] = await db.insert(assessmentQuestions).values(data).returning();
+    return question;
+  }
+
+  async updateAssessmentQuestion(id: number, data: any): Promise<any> {
+    const [updated] = await db.update(assessmentQuestions).set(data).where(eq(assessmentQuestions.id, id)).returning();
+    return updated;
+  }
+
+  async deleteAssessmentQuestion(id: number): Promise<void> {
+    await db.delete(assessmentQuestions).where(eq(assessmentQuestions.id, id));
   }
 }
 

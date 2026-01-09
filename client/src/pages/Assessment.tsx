@@ -111,8 +111,6 @@ const spheres: Sphere[] = [
   { id: "product", name: "Продакт дизайн", description: "Дизайн продуктов и сервисов", questionsCount: 25 },
   { id: "uxui", name: "UX/UI дизайн", description: "Пользовательский опыт и интерфейсы", questionsCount: 30 },
   { id: "graphic", name: "Графический дизайн", description: "Визуальные коммуникации и брендинг", questionsCount: 20 },
-  { id: "3d", name: "3D дизайн", description: "Трёхмерная графика и визуализация", questionsCount: 22 },
-  { id: "motion", name: "Моушн дизайн", description: "Анимация и видео", questionsCount: 18 },
 ];
 
 const mockQuestions = [
