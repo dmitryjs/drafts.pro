@@ -10,11 +10,13 @@ import {
   Clock, 
   X,
   AlertTriangle,
+  AlertCircle,
   BarChart3,
   Globe,
   Loader2,
   XCircle
 } from "lucide-react";
+import russiaFlagUrl from "@assets/russia-flag.png";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -99,6 +101,7 @@ interface FreeTextEvaluation {
     score: number;
     maxScore: number;
     feedback: string;
+    isGibberish?: boolean;
   }[];
   totalScore: number;
   maxTotalScore: number;
@@ -432,13 +435,28 @@ export default function Assessment() {
         .filter(q => q.type === "mcq" && answers[q.id] !== q.correctAnswer)
         .map(q => q.question);
       
+      const gibberishAnswers = freeTextEvaluation?.evaluations
+        .filter(e => e.isGibberish)
+        .map(e => {
+          const question = questions.find(q => q.id === e.questionId);
+          return question?.question || e.questionId;
+        }) || [];
+      
+      const lowScoreAnswers = freeTextEvaluation?.evaluations
+        .filter(e => !e.isGibberish && e.score < e.maxScore * 0.5)
+        .map(e => {
+          const question = questions.find(q => q.id === e.questionId);
+          return question?.question || e.questionId;
+        }) || [];
+      
       const response = await fetch("/api/test-recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sphere: selectedSphere || "product",
           testScore: score,
-          incorrectTopics,
+          incorrectTopics: [...incorrectTopics, ...lowScoreAnswers],
+          gibberishAnswers,
         }),
       });
       
@@ -988,7 +1006,7 @@ export default function Assessment() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-muted/30 rounded-xl">
                 <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1.5">
-                  <span className="w-4 h-3 rounded-sm bg-gradient-to-b from-white via-blue-500 to-red-500 flex-shrink-0" />
+                  <img src={russiaFlagUrl} alt="RU" className="w-4 h-3 rounded-sm object-cover flex-shrink-0" />
                   Россия
                 </div>
                 <div className="text-xl font-bold">{getSalaryRange(gradeRu, "ru")}</div>
@@ -1006,32 +1024,46 @@ export default function Assessment() {
           </Card>
 
           <Card className="p-6">
-            <h3 className="font-semibold mb-4">Детальная информация</h3>
-            <div className="space-y-4">
-              {positiveItems.map((item, index) => (
-                <div key={index} className="flex gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
-                  <CheckCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-foreground">{item.title}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                  </div>
+            <h3 className="font-semibold mb-4">Оценка резюме</h3>
+            
+            {positiveItems.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-emerald-600 mb-3 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Сильные стороны
+                </h4>
+                <div className="space-y-3">
+                  {positiveItems.map((item, index) => (
+                    <div key={index} className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <p className="font-medium text-foreground">{item.title}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {negativeItems.map((item, index) => (
-                <div key={index} className="flex gap-3 pb-4 border-b border-border last:border-0 last:pb-0">
-                  <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-foreground">{item.title}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                  </div>
+              </div>
+            )}
+
+            {negativeItems.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-amber-600 mb-3 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Что улучшить
+                </h4>
+                <div className="space-y-3">
+                  {negativeItems.map((item, index) => (
+                    <div key={index} className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                      <p className="font-medium text-foreground">{item.title}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </Card>
 
           {(isLoadingRecommendations || testRecommendations) && (
             <Card className="p-6">
-              <h3 className="font-semibold mb-4">Рекомендации по развитию</h3>
+              <h3 className="font-semibold mb-4">Результаты теста и рекомендации</h3>
               
               {isLoadingRecommendations ? (
                 <div className="flex items-center justify-center py-8">
@@ -1040,6 +1072,21 @@ export default function Assessment() {
                 </div>
               ) : testRecommendations ? (
                 <div className="space-y-6">
+                  {freeTextEvaluation?.evaluations.some(e => e.isGibberish) && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-red-700">Обнаружены некорректные ответы</p>
+                          <p className="text-sm text-red-600 mt-1">
+                            Система определила, что некоторые ваши ответы содержат бессмысленный текст. 
+                            Это расценивается как незнание темы и снижает итоговую оценку.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {testRecommendations.overallFeedback && (
                     <p className="text-muted-foreground bg-muted/30 p-4 rounded-xl">
                       {testRecommendations.overallFeedback}

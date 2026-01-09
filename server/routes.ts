@@ -612,7 +612,7 @@ export async function registerRoutes(
 
   app.post("/api/test-recommendations", async (req, res) => {
     try {
-      const { sphere, testScore, incorrectTopics } = req.body;
+      const { sphere, testScore, incorrectTopics, gibberishAnswers } = req.body;
       
       if (typeof testScore !== "number") {
         return res.status(400).json({ message: "Test score is required" });
@@ -621,7 +621,8 @@ export async function registerRoutes(
       const recommendations = await generateTestRecommendations(
         sphere || "product",
         testScore,
-        incorrectTopics || []
+        incorrectTopics || [],
+        gibberishAnswers || []
       );
       res.json(recommendations);
     } catch (err) {
