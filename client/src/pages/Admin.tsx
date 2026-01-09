@@ -127,6 +127,11 @@ export default function Admin() {
 
   const { data: questions } = useQuery<AssessmentQuestion[]>({
     queryKey: ["/api/admin/questions", selectedSphere],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/questions?specialization=${selectedSphere}`);
+      if (!res.ok) throw new Error("Failed to fetch questions");
+      return res.json();
+    },
     enabled: isAdminCheck?.isAdmin === true,
   });
 
