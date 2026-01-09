@@ -557,5 +557,33 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // ASSESSMENT TESTS (ТЕСТЫ ДЛЯ ОЦЕНКИ)
+  // ============================================
+
+  app.get("/api/assessment-tests/:sphereId", async (req, res) => {
+    const { sphereId } = req.params;
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    
+    const testFiles: Record<string, string> = {
+      "product": "product-designer-test.json"
+    };
+    
+    const fileName = testFiles[sphereId];
+    if (!fileName) {
+      return res.status(404).json({ message: "Test not found for this sphere" });
+    }
+    
+    try {
+      const filePath = path.join(process.cwd(), "designers_tests", "data", fileName);
+      const content = await fs.readFile(filePath, "utf-8");
+      res.json(JSON.parse(content));
+    } catch (err) {
+      console.error("Failed to load test file:", err);
+      res.status(500).json({ message: "Failed to load test" });
+    }
+  });
+
   return httpServer;
 }

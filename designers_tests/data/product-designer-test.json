@@ -1,0 +1,51 @@
+{
+  "id": "pd-2026-v1",
+  "title": "Product Designer Assessment",
+  "durationMinutes": 60,
+  "scoring": { "mcq": 2, "freeMax": 10 },
+  "gradeBands": [
+    { "grade": "Junior", "min": 0, "max": 35 },
+    { "grade": "Middle", "min": 36, "max": 65 },
+    { "grade": "Senior", "min": 66, "max": 95 },
+    { "grade": "Lead", "min": 96, "max": 120 },
+    { "grade": "Head", "min": 121, "max": 999 }
+  ],
+  "sections": [
+    {
+      "id": "mcq",
+      "type": "mcq",
+      "title": "Multiple Choice",
+      "questions": [
+        {
+          "id": "mcq-1",
+          "prompt": "Главная цель пользовательского сценария",
+          "options": [
+            { "id": "a", "text": "Описать UI-компоненты" },
+            { "id": "b", "text": "Понять путь пользователя к цели", "correct": true },
+            { "id": "c", "text": "Согласовать цвета" },
+            { "id": "d", "text": "Ускорить разработку" }
+          ]
+        },
+        {
+          "id": "mcq-2",
+          "prompt": "UX vs UI",
+          "options": [
+            { "id": "a", "text": "UX = визуал, UI = исследования" },
+            { "id": "b", "text": "UX = опыт/сценарии, UI = визуальная реализация", "correct": true },
+            { "id": "c", "text": "UX = прототипы, UI = тексты" },
+            { "id": "d", "text": "Нет различий" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "free",
+      "type": "free",
+      "title": "Open Questions",
+      "questions": [
+        { "id": "fr-1", "prompt": "Падение конверсии в оплату на 15%. План диагностики на 60 минут.", "rubricMax": 10 },
+        { "id": "fr-2", "prompt": "Опиши “aha moment” для продукта: стриминг / SaaS / маркетплейс (выбери один).", "rubricMax": 10 }
+      ]
+    }
+  ]
+}

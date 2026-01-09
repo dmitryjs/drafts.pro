@@ -47,6 +47,43 @@ interface Sphere {
   questionsCount: number;
 }
 
+interface TestOption {
+  id: string;
+  text: string;
+  correct?: boolean;
+}
+
+interface TestQuestion {
+  id: string;
+  prompt: string;
+  options?: TestOption[];
+  rubricMax?: number;
+}
+
+interface TestSection {
+  id: string;
+  type: "mcq" | "free";
+  title: string;
+  questions: TestQuestion[];
+}
+
+interface TestData {
+  id: string;
+  title: string;
+  durationMinutes: number;
+  scoring: { mcq: number; freeMax: number };
+  gradeBands: { grade: string; min: number; max: number }[];
+  sections: TestSection[];
+}
+
+interface NormalizedQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  type: "mcq" | "free";
+}
+
 const spheres: Sphere[] = [
   { id: "product", name: "Продакт дизайн", description: "Дизайн продуктов и сервисов", questionsCount: 25 },
   { id: "uxui", name: "UX/UI дизайн", description: "Пользовательский опыт и интерфейсы", questionsCount: 30 },
@@ -156,14 +193,39 @@ const mockFeedbackItems: FeedbackItem[] = [
   }
 ];
 
+const normalizeTestData = (data: TestData): NormalizedQuestion[] => {
+  const questions: NormalizedQuestion[] = [];
+  
+  data.sections.forEach(section => {
+    if (section.type === "mcq") {
+      section.questions.forEach(q => {
+        if (q.options) {
+          const correctIndex = q.options.findIndex(opt => opt.correct === true);
+          questions.push({
+            id: q.id,
+            question: q.prompt,
+            options: q.options.map(opt => opt.text),
+            correctAnswer: correctIndex >= 0 ? correctIndex : 0,
+            type: "mcq"
+          });
+        }
+      });
+    }
+  });
+  
+  return questions;
+};
+
 export default function Assessment() {
   const [step, setStep] = useState<AssessmentStep>("upload");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [selectedSphere, setSelectedSphere] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [testQuestions, setTestQuestions] = useState<NormalizedQuestion[]>([]);
+  const [isLoadingTest, setIsLoadingTest] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -198,12 +260,52 @@ export default function Assessment() {
     }
   };
 
-  const handleAnswer = (questionId: number, answerIndex: number) => {
+  const loadTestForSphere = async (sphereId: string) => {
+    setIsLoadingTest(true);
+    try {
+      const response = await fetch(`/api/assessment-tests/${sphereId}`);
+      if (response.ok) {
+        const data: TestData = await response.json();
+        const normalized = normalizeTestData(data);
+        if (normalized.length > 0) {
+          setTestQuestions(normalized);
+        } else {
+          setTestQuestions(mockQuestions.map(q => ({
+            id: q.id.toString(),
+            question: q.question,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            type: "mcq" as const
+          })));
+        }
+      } else {
+        setTestQuestions(mockQuestions.map(q => ({
+          id: q.id.toString(),
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          type: "mcq" as const
+        })));
+      }
+    } catch (error) {
+      console.error("Failed to load test:", error);
+      setTestQuestions(mockQuestions.map(q => ({
+        id: q.id.toString(),
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        type: "mcq" as const
+      })));
+    }
+    setIsLoadingTest(false);
+  };
+
+  const handleAnswer = (questionId: string, answerIndex: number) => {
     setAnswers(prev => ({ ...prev, [questionId]: answerIndex }));
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestion < mockQuestions.length - 1) {
+    if (currentQuestion < testQuestions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
     } else {
       setStep("results");
@@ -223,10 +325,17 @@ export default function Assessment() {
 
   const calculateScore = () => {
     let correct = 0;
-    mockQuestions.forEach(q => {
+    const questions = testQuestions.length > 0 ? testQuestions : mockQuestions.map(q => ({
+      id: q.id.toString(),
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer,
+      type: "mcq" as const
+    }));
+    questions.forEach(q => {
       if (answers[q.id] === q.correctAnswer) correct++;
     });
-    return Math.round((correct / mockQuestions.length) * 100);
+    return Math.round((correct / questions.length) * 100);
   };
 
   const getGrade = (score: number) => {
@@ -444,12 +553,26 @@ export default function Assessment() {
           </Button>
           <Button
             className="flex-1 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl"
-            disabled={!selectedSphere}
-            onClick={() => setStep("testing")}
+            disabled={!selectedSphere || isLoadingTest}
+            onClick={async () => {
+              if (selectedSphere) {
+                await loadTestForSphere(selectedSphere);
+                setStep("testing");
+              }
+            }}
             data-testid="button-start-test"
           >
-            Начать тестирование
-            <ArrowRight className="ml-2 h-4 w-4" />
+            {isLoadingTest ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Загрузка теста...
+              </>
+            ) : (
+              <>
+                Начать тестирование
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
           </Button>
         </div>
       </Card>
@@ -457,8 +580,17 @@ export default function Assessment() {
   );
 
   const renderTestingStep = () => {
-    const question = mockQuestions[currentQuestion];
-    const progress = ((currentQuestion + 1) / mockQuestions.length) * 100;
+    const questions = testQuestions.length > 0 ? testQuestions : mockQuestions.map(q => ({
+      id: q.id.toString(),
+      question: q.question,
+      options: q.options,
+      correctAnswer: q.correctAnswer,
+      type: "mcq" as const
+    }));
+    const question = questions[currentQuestion];
+    const progress = ((currentQuestion + 1) / questions.length) * 100;
+
+    if (!question) return null;
 
     return (
       <motion.div
@@ -471,7 +603,7 @@ export default function Assessment() {
           <div>
             <h1 className="text-xl font-bold">Тестирование</h1>
             <p className="text-sm text-muted-foreground">
-              Вопрос {currentQuestion + 1} из {mockQuestions.length}
+              Вопрос {currentQuestion + 1} из {questions.length}
             </p>
           </div>
           <Button
@@ -532,7 +664,7 @@ export default function Assessment() {
               onClick={handleNextQuestion}
               data-testid="button-next-question"
             >
-              {currentQuestion === mockQuestions.length - 1 ? "Завершить тест" : "Следующий вопрос"}
+              {currentQuestion === questions.length - 1 ? "Завершить тест" : "Следующий вопрос"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
