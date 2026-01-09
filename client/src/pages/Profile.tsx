@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,19 +8,49 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Edit2, Zap, Info } from "lucide-react";
+import { Edit2, Zap, Info, FileText, ChevronRight } from "lucide-react";
 import { SiTelegram, SiBehance, SiDribbble } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import MainLayout from "@/components/layout/MainLayout";
 import { getLevelInfo, XP_REWARDS } from "@shared/xp";
+import type { TaskDraft } from "@shared/schema";
 
 export default function Profile() {
+  const [, navigate] = useLocation();
   const mockUserXp = 450;
   const levelInfo = getLevelInfo(mockUserXp);
+
+  const { data: drafts } = useQuery<TaskDraft[]>({
+    queryKey: ["/api/drafts"],
+  });
+
+  const draftsCount = drafts?.length || 0;
   
   const rightPanel = (
     <div className="space-y-6">
+      {/* Drafts Section */}
       <div>
+        <button
+          onClick={() => navigate("/drafts")}
+          className="w-full flex items-center justify-between p-3 rounded-lg bg-[#F0F0F0] hover:bg-[#E5E5E5] transition-colors group"
+          data-testid="button-go-to-drafts"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="text-left">
+              <p className="font-medium">Черновики</p>
+              <p className="text-xs text-muted-foreground">
+                {draftsCount > 0 ? `${draftsCount} ${draftsCount === 1 ? 'черновик' : draftsCount < 5 ? 'черновика' : 'черновиков'}` : 'Нет черновиков'}
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+        </button>
+      </div>
+
+      <div className="border-t pt-6">
         <h3 className="font-semibold mb-3">Статистика</h3>
         <div className="space-y-3">
           <div className="flex justify-between text-sm">

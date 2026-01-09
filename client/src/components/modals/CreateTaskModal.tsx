@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { X, Tag, Briefcase, Paperclip, Plus } from "lucide-react";
+import { X, Tag, Briefcase, Paperclip, Plus, ChevronLeft, ChevronRight, FileText, FileArchive } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -78,9 +78,15 @@ const ALLOWED_FILE_TYPES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILES = 5;
 
+interface AttachmentWithPreview {
+  file: File;
+  previewUrl: string | null;
+}
+
 export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
   
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState("");
@@ -88,7 +94,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [spheres, setSpheres] = useState<string[]>([]);
-  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentWithPreview[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [sphereInput, setSphereInput] = useState("");
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -137,6 +143,9 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
     setDescription("");
     setTags([]);
     setSpheres([]);
+    attachments.forEach(a => {
+      if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+    });
     setAttachments([]);
     setTagInput("");
     setSphereInput("");
@@ -204,7 +213,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const validFiles: File[] = [];
+    const validFiles: AttachmentWithPreview[] = [];
     const availableSlots = MAX_FILES - attachments.length;
     
     if (availableSlots <= 0) {
@@ -245,7 +254,12 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
         continue;
       }
       
-      validFiles.push(file);
+      let previewUrl: string | null = null;
+      if (file.type.startsWith('image/')) {
+        previewUrl = URL.createObjectURL(file);
+      }
+      
+      validFiles.push({ file, previewUrl });
     }
     
     if (validFiles.length > 0) {
@@ -258,7 +272,23 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
   };
 
   const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
+    setAttachments(prev => {
+      const removed = prev[index];
+      if (removed?.previewUrl) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    if (carouselRef.current) {
+      const scrollAmount = 256; // 240px width + 16px gap
+      carouselRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
   };
 
   const getCategoryDot = (cat: string) => {
@@ -270,6 +300,14 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
       case "3d": return "bg-blue-500";
       default: return "bg-gray-500";
     }
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.type === 'application/pdf') return <FileText className="h-12 w-12 text-red-500" />;
+    if (file.type.includes('zip')) return <FileArchive className="h-12 w-12 text-yellow-500" />;
+    if (file.name.endsWith('.fig')) return <div className="text-2xl font-bold text-purple-500">FIG</div>;
+    if (file.name.endsWith('.sketch')) return <div className="text-2xl font-bold text-orange-500">SK</div>;
+    return <FileText className="h-12 w-12 text-muted-foreground" />;
   };
 
   const buttonStyle = "bg-[#F0F0F0] hover:bg-[#E5E5E5] text-foreground border-0";
@@ -345,70 +383,62 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             data-testid="input-task-description"
           />
 
-          {/* Tags chips */}
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <div
-                  key={tag}
-                  className="flex items-center gap-2 bg-[#F0F0F0] rounded-md py-2 px-4"
-                  data-testid={`tag-chip-${tag}`}
-                >
-                  <span className="text-sm">{tag}</span>
-                  <button
-                    onClick={() => removeTag(tag)}
-                    className="text-muted-foreground hover:text-foreground"
-                    data-testid={`button-remove-tag-${tag}`}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Spheres chips */}
-          {spheres.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {spheres.map((sphere) => (
-                <div
-                  key={sphere}
-                  className="flex items-center gap-2 bg-[#F0F0F0] rounded-md py-2 px-4"
-                  data-testid={`sphere-chip-${sphere}`}
-                >
-                  <span className="text-sm">{sphere}</span>
-                  <button
-                    onClick={() => removeSphere(sphere)}
-                    className="text-muted-foreground hover:text-foreground"
-                    data-testid={`button-remove-sphere-${sphere}`}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Attachments list */}
+          {/* Attachments carousel */}
           {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {attachments.map((file, index) => (
-                <div
-                  key={`${file.name}-${index}`}
-                  className="flex items-center gap-2 bg-[#F0F0F0] rounded-md py-2 px-4"
-                  data-testid={`attachment-${index}`}
-                >
-                  <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm truncate max-w-[150px]">{file.name}</span>
+            <div className="relative">
+              {attachments.length > 3 && (
+                <>
                   <button
-                    onClick={() => removeAttachment(index)}
-                    className="text-muted-foreground hover:text-foreground"
-                    data-testid={`button-remove-attachment-${index}`}
+                    onClick={() => scrollCarousel('left')}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-md rounded-full p-1.5"
+                    data-testid="button-carousel-left"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                </div>
-              ))}
+                  <button
+                    onClick={() => scrollCarousel('right')}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-md rounded-full p-1.5"
+                    data-testid="button-carousel-right"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+              <div
+                ref={carouselRef}
+                className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-1"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {attachments.map((attachment, index) => (
+                  <div
+                    key={`${attachment.file.name}-${index}`}
+                    className="relative flex-shrink-0 w-[240px] h-[160px] rounded-lg overflow-hidden bg-[#F0F0F0] group"
+                    data-testid={`attachment-preview-${index}`}
+                  >
+                    {attachment.previewUrl ? (
+                      <img
+                        src={attachment.previewUrl}
+                        alt={attachment.file.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                        {getFileIcon(attachment.file)}
+                        <span className="text-xs text-muted-foreground px-2 text-center truncate max-w-full">
+                          {attachment.file.name}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      data-testid={`button-remove-attachment-${index}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -430,10 +460,38 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
                 >
                   <Tag className="h-4 w-4 mr-1.5" />
                   Теги
+                  {tags.length > 0 && (
+                    <span className="ml-1.5 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {tags.length}
+                    </span>
+                  )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent side="top" className="w-64 p-3" align="start">
+              <PopoverContent side="top" className="w-72 p-3" align="start">
                 <div className="space-y-3">
+                  {/* Selected tags */}
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <div
+                          key={tag}
+                          className="flex items-center gap-1.5 bg-[#F0F0F0] rounded-md py-1.5 px-3 text-sm"
+                          data-testid={`tag-chip-${tag}`}
+                        >
+                          <span>{tag}</span>
+                          <button
+                            onClick={() => removeTag(tag)}
+                            className="text-muted-foreground hover:text-foreground"
+                            data-testid={`button-remove-tag-${tag}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Input with plus */}
                   <div className="flex gap-2">
                     <Input
                       placeholder="Добавить тег..."
@@ -446,6 +504,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
                     <Button
                       size="icon"
                       variant="ghost"
+                      className="bg-[#F0F0F0] hover:bg-[#E5E5E5]"
                       onClick={() => addTag(tagInput)}
                       disabled={!tagInput.trim()}
                       data-testid="button-add-tag"
@@ -453,6 +512,8 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
+                  
+                  {/* Popular tags */}
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Популярные</p>
                     <div className="flex flex-wrap gap-1">
@@ -482,10 +543,38 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
                 >
                   <Briefcase className="h-4 w-4 mr-1.5" />
                   Сфера
+                  {spheres.length > 0 && (
+                    <span className="ml-1.5 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {spheres.length}
+                    </span>
+                  )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent side="top" className="w-64 p-3" align="start">
+              <PopoverContent side="top" className="w-72 p-3" align="start">
                 <div className="space-y-3">
+                  {/* Selected spheres */}
+                  {spheres.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {spheres.map((sphere) => (
+                        <div
+                          key={sphere}
+                          className="flex items-center gap-1.5 bg-[#F0F0F0] rounded-md py-1.5 px-3 text-sm"
+                          data-testid={`sphere-chip-${sphere}`}
+                        >
+                          <span>{sphere}</span>
+                          <button
+                            onClick={() => removeSphere(sphere)}
+                            className="text-muted-foreground hover:text-foreground"
+                            data-testid={`button-remove-sphere-${sphere}`}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Input with plus */}
                   <div className="flex gap-2">
                     <Input
                       placeholder="Добавить сферу..."
@@ -498,6 +587,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
                     <Button
                       size="icon"
                       variant="ghost"
+                      className="bg-[#F0F0F0] hover:bg-[#E5E5E5]"
                       onClick={() => addSphere(sphereInput)}
                       disabled={!sphereInput.trim()}
                       data-testid="button-add-sphere"
@@ -505,6 +595,8 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
+                  
+                  {/* Popular spheres */}
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Популярные</p>
                     <div className="flex flex-wrap gap-1">
@@ -533,7 +625,12 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
               data-testid="button-attachments"
             >
               <Paperclip className="h-4 w-4 mr-1.5" />
-              Вложения ({attachments.length}/{MAX_FILES})
+              Вложения
+              {attachments.length > 0 && (
+                <span className="ml-1.5 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {attachments.length}
+                </span>
+              )}
             </Button>
             <input
               ref={fileInputRef}

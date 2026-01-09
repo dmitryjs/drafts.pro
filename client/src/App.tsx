@@ -14,6 +14,7 @@ import BattleDetail from "@/pages/BattleDetail";
 import Assessment from "@/pages/Assessment";
 import Mentors from "@/pages/Mentors";
 import Profile from "@/pages/Profile";
+import Drafts from "@/pages/Drafts";
 import Settings from "@/pages/Settings";
 
 function Router() {
@@ -30,6 +31,11 @@ function Router() {
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/drafts">
+        <ProtectedRoute>
+          <Drafts />
         </ProtectedRoute>
       </Route>
       <Route path="/settings" component={Settings} />
