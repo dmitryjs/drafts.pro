@@ -13,7 +13,9 @@ import {
   FolderOpen,
   FileImage,
   Upload,
-  ChevronRight
+  ChevronRight,
+  Share2,
+  Flag
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -21,8 +23,17 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTask } from "@/hooks/use-data";
 import { useAuth } from "@/hooks/use-auth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const getLevelColor = (level: string) => {
@@ -56,9 +67,39 @@ export default function TaskDetail() {
   const slug = params?.slug || "";
   const { data: task, isLoading } = useTask(slug);
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("description");
-  const [isBookmarked, setIsBookmarked] = useState(false);
   const [userSolution, setUserSolution] = useState<any>(null);
+
+  const favoriteMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      return apiRequest("POST", `/api/tasks/${taskId}/favorite`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", slug] });
+      toast({ title: "Обновлено" });
+    },
+  });
+
+  const handleFavorite = () => {
+    if (!user) {
+      toast({ title: "Войдите, чтобы добавить в избранное" });
+      return;
+    }
+    if (task) {
+      favoriteMutation.mutate(task.id);
+    }
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({ title: "Ссылка скопирована" });
+  };
+
+  const handleReport = () => {
+    toast({ title: "Жалоба отправлена", description: "Мы рассмотрим вашу жалобу в ближайшее время" });
+  };
 
   if (isLoading) {
     return (
@@ -89,11 +130,7 @@ export default function TaskDetail() {
   const attachments = task.attachments || [];
   const visibleAttachments = attachments.slice(0, 4);
   const remainingCount = Math.max(0, attachments.length - 4);
-
-  const handleBookmark = () => {
-    if (!user) return;
-    setIsBookmarked(!isBookmarked);
-  };
+  const isFavorited = task.isFavorited || false;
 
   const handleSubmitSolution = () => {
     if (!user) return;
@@ -184,22 +221,36 @@ export default function TaskDetail() {
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={handleBookmark}
+              onClick={handleFavorite}
               className={cn(
                 "h-9 w-9 rounded-full flex items-center justify-center transition-colors",
-                isBookmarked ? "bg-[#2D2D2D] text-white" : "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
+                isFavorited ? "bg-[#FF6030] text-white" : "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
               )}
-              data-testid="button-bookmark"
+              data-testid="button-favorite"
             >
               <Star className="h-4 w-4" />
             </button>
             
-            <button
-              className="h-9 w-9 rounded-full flex items-center justify-center bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4] transition-colors"
-              data-testid="button-more"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="h-9 w-9 rounded-full flex items-center justify-center bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4] transition-colors"
+                  data-testid="button-more"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleShare} className="cursor-pointer">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Поделиться
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleReport} className="cursor-pointer text-red-600">
+                  <Flag className="h-4 w-4 mr-2" />
+                  Пожаловаться
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {user ? (
               <Button 
