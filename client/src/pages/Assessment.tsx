@@ -339,22 +339,30 @@ export default function Assessment() {
   };
 
   const getGrade = (score: number) => {
-    if (score >= 90) return "Senior";
-    if (score >= 75) return "Middle+";
-    if (score >= 60) return "Middle";
-    if (score >= 45) return "Junior+";
-    return "Junior";
+    if (score >= 90) return "Advanced";
+    if (score >= 70) return "Proficient";
+    if (score >= 50) return "Developing";
+    if (score >= 10) return "Aspiring";
+    return "Novice";
   };
 
-  const getSalaryRange = (grade: string, location: "ru" | "abroad") => {
+  const getGradeRu = (score: number) => {
+    if (score >= 90) return "Senior";
+    if (score >= 70) return "Middle+";
+    if (score >= 50) return "Middle";
+    if (score >= 10) return "Junior";
+    return "Intern";
+  };
+
+  const getSalaryRange = (gradeRu: string, location: "ru" | "abroad") => {
     const salaries: Record<string, { ru: string; abroad: string }> = {
       "Senior": { ru: "250 000 - 400 000 ₽", abroad: "$6 000 - $12 000" },
       "Middle+": { ru: "180 000 - 280 000 ₽", abroad: "$4 000 - $7 000" },
       "Middle": { ru: "120 000 - 200 000 ₽", abroad: "$3 000 - $5 000" },
-      "Junior+": { ru: "80 000 - 140 000 ₽", abroad: "$2 000 - $3 500" },
-      "Junior": { ru: "50 000 - 90 000 ₽", abroad: "$1 200 - $2 500" },
+      "Junior": { ru: "80 000 - 140 000 ₽", abroad: "$2 000 - $3 500" },
+      "Intern": { ru: "50 000 - 90 000 ₽", abroad: "$1 200 - $2 500" },
     };
-    return salaries[grade]?.[location] || "N/A";
+    return salaries[gradeRu]?.[location] || "N/A";
   };
 
   const renderUploadStep = () => (
@@ -678,6 +686,7 @@ export default function Assessment() {
     const resumeScore = 78;
     const finalScore = Math.round((testScore * 0.6) + (resumeScore * 0.4));
     const grade = getGrade(finalScore);
+    const gradeRu = getGradeRu(finalScore);
 
     const positiveItems = mockFeedbackItems.filter(item => item.isPositive);
     const negativeItems = mockFeedbackItems.filter(item => !item.isPositive);
@@ -718,15 +727,81 @@ export default function Assessment() {
           </Card>
 
           <Card className="p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold">Ваш грейд и зарплатный бенчмарк</h2>
-            </div>
+            <h2 className="font-semibold text-center mb-6">BENCHMARK SCORE</h2>
             
-            <div className="text-center p-6 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl mb-6">
-              <div className="text-4xl font-bold text-primary mb-2">{grade}</div>
-              <div className="text-sm text-muted-foreground">
-                {spheres.find(s => s.id === selectedSphere)?.name}
+            <div className="flex flex-col items-center mb-6">
+              <div className="relative w-48 h-24 mb-2">
+                <svg viewBox="0 0 200 100" className="w-full h-full">
+                  <defs>
+                    <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#22c55e" />
+                      <stop offset="50%" stopColor="#3b82f6" />
+                      <stop offset="100%" stopColor="#06b6d4" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M 20 90 A 80 80 0 0 1 180 90"
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M 20 90 A 80 80 0 0 1 180 90"
+                    fill="none"
+                    stroke="url(#gaugeGradient)"
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(finalScore / 100) * 251.2} 251.2`}
+                  />
+                  <polygon
+                    points="100,50 96,90 104,90"
+                    fill="#22c55e"
+                    transform={`rotate(${-90 + (finalScore / 100) * 180}, 100, 90)`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-end pb-0">
+                  <span className="text-4xl font-bold text-foreground">{finalScore}</span>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Skill Level:</p>
+                <p className="text-lg font-semibold text-[#3b82f6]">{grade}</p>
+              </div>
+
+              <div className="flex items-center justify-center gap-1 mt-2 text-xs text-muted-foreground">
+                <span>0</span>
+                <div className="w-32 h-1.5 bg-gradient-to-r from-[#22c55e] via-[#3b82f6] to-[#06b6d4] rounded-full" />
+                <span>100</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-5 gap-2 text-center text-xs mb-6">
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <span className="text-muted-foreground">Novice</span>
+                <span className="text-muted-foreground/70">0 - 9</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <span className="text-muted-foreground">Aspiring</span>
+                <span className="text-muted-foreground/70">10 - 49</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-cyan-400" />
+                <span className="text-muted-foreground">Developing</span>
+                <span className="text-muted-foreground/70">50 - 69</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                <span className="text-muted-foreground">Proficient</span>
+                <span className="text-muted-foreground/70">70 - 89</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                <span className="text-muted-foreground">Advanced</span>
+                <span className="text-muted-foreground/70">90 - 100</span>
               </div>
             </div>
 
@@ -736,7 +811,7 @@ export default function Assessment() {
                   <span className="w-4 h-3 rounded-sm bg-gradient-to-b from-white via-blue-500 to-red-500 flex-shrink-0" />
                   Россия
                 </div>
-                <div className="text-xl font-bold">{getSalaryRange(grade, "ru")}</div>
+                <div className="text-xl font-bold">{getSalaryRange(gradeRu, "ru")}</div>
                 <div className="text-xs text-muted-foreground mt-1">в месяц</div>
               </div>
               <div className="p-4 bg-muted/30 rounded-xl">
@@ -744,7 +819,7 @@ export default function Assessment() {
                   <Globe className="h-4 w-4 flex-shrink-0" />
                   Зарубежом
                 </div>
-                <div className="text-xl font-bold">{getSalaryRange(grade, "abroad")}</div>
+                <div className="text-xl font-bold">{getSalaryRange(gradeRu, "abroad")}</div>
                 <div className="text-xs text-muted-foreground mt-1">в месяц</div>
               </div>
             </div>
