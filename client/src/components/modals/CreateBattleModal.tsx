@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,17 +13,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CreateBattleModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+const categories = [
+  { value: "product", label: "Продукт", color: "bg-purple-500" },
+  { value: "graphic", label: "Графический", color: "bg-yellow-500" },
+  { value: "uxui", label: "UX/UI", color: "bg-pink-500" },
+  { value: "3d", label: "3D", color: "bg-blue-500" },
+];
+
 export default function CreateBattleModal({ open, onOpenChange }: CreateBattleModalProps) {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,20 +49,32 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
     }
   };
 
-  const handleSubmit = () => {
-    if (!selectedImage || !title.trim()) return;
-    onOpenChange(false);
+  const resetForm = () => {
     setSelectedImage(null);
     setPreviewUrl(null);
     setTitle("");
     setDescription("");
+    setCategory("");
   };
 
-  const isFormValid = selectedImage && title.trim();
+  const handleSubmit = () => {
+    if (!selectedImage || !title.trim() || !category) return;
+    onOpenChange(false);
+    resetForm();
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      resetForm();
+    }
+    onOpenChange(open);
+  };
+
+  const isFormValid = selectedImage && title.trim() && category;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent hideCloseButton className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Создать новый батл</DialogTitle>
         </DialogHeader>
@@ -66,13 +94,14 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
                 </Badge>
               </div>
             </div>
-            <button 
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => onOpenChange(false)}
-              data-testid="button-close-info"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <DialogClose asChild>
+              <button 
+                className="text-muted-foreground hover:text-foreground"
+                data-testid="button-close-info"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogClose>
           </div>
         </Card>
 
@@ -149,6 +178,27 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
                   className="mt-1.5 rounded-xl"
                   data-testid="input-battle-title"
                 />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">
+                  Категория
+                </Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="mt-1.5 rounded-xl" data-testid="select-battle-category">
+                    <SelectValue placeholder="Выберите категорию" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2.5 h-2.5 rounded-full ${cat.color}`} />
+                          {cat.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>

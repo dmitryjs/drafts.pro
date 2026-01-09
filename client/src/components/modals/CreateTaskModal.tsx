@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
+        hideCloseButton
         className={`${isFullscreen ? 'max-w-4xl h-[90vh]' : 'max-w-2xl'} flex flex-col gap-0 p-0`}
       >
         <DialogHeader className="px-6 py-4 border-b flex-row items-center justify-between gap-4">
@@ -77,14 +79,15 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             >
               <Maximize2 className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onOpenChange(false)}
-              data-testid="button-close-modal"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <DialogClose asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                data-testid="button-close-modal"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
           </div>
         </DialogHeader>
 
