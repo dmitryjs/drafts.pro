@@ -12,7 +12,6 @@ import Auth from "@/pages/Auth";
 import Battles from "@/pages/Battles";
 import BattleDetail from "@/pages/BattleDetail";
 import Assessment from "@/pages/Assessment";
-import Mentors from "@/pages/Mentors";
 import Profile from "@/pages/Profile";
 import Drafts from "@/pages/Drafts";
 import Settings from "@/pages/Settings";
@@ -27,7 +26,6 @@ function Router() {
       <Route path="/battles" component={Battles} />
       <Route path="/battles/:slug" component={BattleDetail} />
       <Route path="/assessment" component={Assessment} />
-      <Route path="/mentors" component={Mentors} />
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />

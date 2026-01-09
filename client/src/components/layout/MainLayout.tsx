@@ -43,7 +43,6 @@ const navItems = [
   { href: "/", icon: LayoutGrid, label: "Задачи" },
   { href: "/battles", icon: Swords, label: "Батлы" },
   { href: "/assessment", icon: BarChart3, label: "Оценка навыков" },
-  { href: "/mentors", icon: Users, label: "Менторы" },
 ];
 
 export default function MainLayout({ 
