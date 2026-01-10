@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw, Loader2, Pencil } from "lucide-react";
 import { SiTelegram, SiBehance, SiDribbble } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import MainLayout from "@/components/layout/MainLayout";
+import UserAvatar from "@/components/UserAvatar";
 import { getLevelInfo, XP_REWARDS } from "@shared/xp";
 import type { TaskDraft, Profile as ProfileType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -31,8 +32,8 @@ export default function Profile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
   
-  // Form state
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [company, setCompany] = useState("");
@@ -52,13 +53,11 @@ export default function Profile() {
     avatarUrl: null as string | null,
   });
 
-  // Fetch profile data
   const { data: profileData } = useQuery<ProfileType>({
     queryKey: ["/api/profiles", user?.id],
     enabled: !!user?.id,
   });
 
-  // Set initial values when profile loads
   useEffect(() => {
     if (profileData) {
       const values = {
@@ -86,7 +85,6 @@ export default function Profile() {
   const mockUserXp = 450;
   const levelInfo = getLevelInfo(mockUserXp);
 
-  // Check if form has changes
   const hasChanges = 
     fullName !== initialValues.fullName ||
     bio !== initialValues.bio ||
@@ -94,7 +92,8 @@ export default function Profile() {
     location !== initialValues.location ||
     telegramLink !== initialValues.telegramLink ||
     behanceLink !== initialValues.behanceLink ||
-    dribbbleLink !== initialValues.dribbbleLink;
+    dribbbleLink !== initialValues.dribbbleLink ||
+    avatarUrl !== initialValues.avatarUrl;
 
   const saveProfileMutation = useMutation({
     mutationFn: async (data: Partial<ProfileType>) => {
@@ -114,23 +113,10 @@ export default function Profile() {
         dribbbleLink,
         avatarUrl,
       });
+      setIsEditing(false);
     },
     onError: () => {
       toast({ title: "Ошибка при сохранении", variant: "destructive" });
-    },
-  });
-
-  const saveAvatarMutation = useMutation({
-    mutationFn: async (url: string | null) => {
-      if (!user?.id) throw new Error("Not authenticated");
-      return apiRequest("PATCH", `/api/profiles/${user.id}`, { avatarUrl: url });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
-      toast({ title: "Аватарка сохранена!" });
-    },
-    onError: () => {
-      toast({ title: "Ошибка при сохранении аватарки", variant: "destructive" });
     },
   });
 
@@ -141,7 +127,20 @@ export default function Profile() {
       company: company || undefined,
       location: location || undefined,
       telegramUsername: telegramLink || undefined,
+      avatarUrl: avatarUrl,
     });
+  };
+
+  const handleCancel = () => {
+    setFullName(initialValues.fullName);
+    setBio(initialValues.bio);
+    setCompany(initialValues.company);
+    setLocation(initialValues.location);
+    setTelegramLink(initialValues.telegramLink);
+    setBehanceLink(initialValues.behanceLink);
+    setDribbbleLink(initialValues.dribbbleLink);
+    setAvatarUrl(initialValues.avatarUrl);
+    setIsEditing(false);
   };
 
   const { data: drafts } = useQuery<TaskDraft[]>({
@@ -153,19 +152,15 @@ export default function Profile() {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 3MB for base64 storage)
       if (file.size > 3 * 1024 * 1024) {
         toast({ title: "Файл слишком большой. Максимум 3MB", variant: "destructive" });
         return;
       }
       
-      // Convert to base64 for persistent storage
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64Url = reader.result as string;
         setAvatarUrl(base64Url);
-        // Auto-save avatar as base64
-        saveAvatarMutation.mutate(base64Url);
       };
       reader.onerror = () => {
         toast({ title: "Ошибка при чтении файла", variant: "destructive" });
@@ -176,13 +171,74 @@ export default function Profile() {
 
   const handleDeleteAvatar = () => {
     setAvatarUrl(null);
-    saveAvatarMutation.mutate(null);
   };
 
   const hasSocialLinks = telegramLink || behanceLink || dribbbleLink;
   
   const rightPanel = (
     <div className="space-y-6">
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="font-semibold">Опыт и уровень</h3>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6" data-testid="button-xp-info">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="text-sm font-medium mb-2">Как заработать XP:</p>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between gap-4">
+                    <span>Победа в батле</span>
+                    <span className="text-[#FF6030]">+{XP_REWARDS.BATTLE_WIN.xp} XP</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>2-е место в батле</span>
+                    <span className="text-[#FF6030]">+{XP_REWARDS.BATTLE_SECOND.xp} XP</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Принятое решение</span>
+                    <span className="text-[#FF6030]">+{XP_REWARDS.TASK_ACCEPTED.xp} XP</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Решение задачи</span>
+                    <span className="text-[#FF6030]">+{XP_REWARDS.TASK_SOLUTION.xp} XP</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Ежедневный вход</span>
+                    <span className="text-[#FF6030]">+{XP_REWARDS.DAILY_LOGIN.xp} XP</span>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex flex-col items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-[#FF6030] to-[#FF8F70] text-white flex-shrink-0">
+              <span className="text-xl font-bold">{levelInfo.level}</span>
+              <span className="text-[10px] opacity-90">уровень</span>
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-sm mb-2">
+                <Zap className="h-4 w-4 text-[#FF6030]" />
+                <span className="font-medium">{levelInfo.totalXp} XP</span>
+              </div>
+              
+              <Progress value={levelInfo.progressPercent} className="h-2 mb-1" />
+              
+              {!levelInfo.isMaxLevel && levelInfo.nextLevel && (
+                <p className="text-xs text-muted-foreground">
+                  До уровня {levelInfo.nextLevel.level}: {levelInfo.xpToNextLevel - levelInfo.xpInCurrentLevel} XP
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div>
         <button
           onClick={() => navigate("/drafts")}
@@ -239,278 +295,256 @@ export default function Profile() {
       >
         <Card className="relative">
           <CardContent className="p-6">
-            <div className="flex items-start gap-6">
-              <div className="relative">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                  data-testid="input-avatar-file"
-                />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="cursor-pointer" data-testid="button-avatar-menu">
-                      <Avatar className="w-24 h-24 border-2 border-border/30">
-                        <AvatarImage src={avatarUrl || ""} />
-                        <AvatarFallback className="text-2xl bg-[#34C759] text-white font-medium">
-                          {fullName ? fullName.charAt(0).toUpperCase() : "А"}
-                        </AvatarFallback>
-                      </Avatar>
-                      {saveAvatarMutation.isPending && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
-                          <Loader2 className="h-6 w-6 animate-spin text-white" />
-                        </div>
-                      )}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {avatarUrl ? (
-                      <>
-                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Заменить
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleDeleteAvatar} className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Удалить
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Загрузить аватарку
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold">{fullName || "Иван Петров"}</h1>
-                <p className="text-muted-foreground">{bio || "Product Designer"}</p>
-                {hasSocialLinks && (
-                  <div className="flex gap-2 mt-3">
-                    {telegramLink && (
-                      <a href={telegramLink} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                          <SiTelegram className="h-4 w-4" />
-                        </Button>
-                      </a>
-                    )}
-                    {behanceLink && (
-                      <a href={behanceLink} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                          <SiBehance className="h-4 w-4" />
-                        </Button>
-                      </a>
-                    )}
-                    {dribbbleLink && (
-                      <a href={dribbbleLink} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                          <SiDribbble className="h-4 w-4" />
-                        </Button>
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-lg">Опыт и уровень</h2>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6" data-testid="button-xp-info">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs">
-                <p className="text-sm font-medium mb-2">Как заработать XP:</p>
-                <div className="space-y-1 text-xs">
-                  <div className="flex justify-between gap-4">
-                    <span>Победа в батле</span>
-                    <span className="text-[#FF6030]">+{XP_REWARDS.BATTLE_WIN.xp} XP</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>2-е место в батле</span>
-                    <span className="text-[#FF6030]">+{XP_REWARDS.BATTLE_SECOND.xp} XP</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>Принятое решение</span>
-                    <span className="text-[#FF6030]">+{XP_REWARDS.TASK_ACCEPTED.xp} XP</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>Решение задачи</span>
-                    <span className="text-[#FF6030]">+{XP_REWARDS.TASK_SOLUTION.xp} XP</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>Ежедневный вход</span>
-                    <span className="text-[#FF6030]">+{XP_REWARDS.DAILY_LOGIN.xp} XP</span>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-6">
-                <div className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#FF6030] to-[#FF8F70] text-white">
-                  <span className="text-2xl font-bold">{levelInfo.level}</span>
-                  <span className="text-xs opacity-90">уровень</span>
-                </div>
-                
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <span className="font-semibold text-lg">Уровень {levelInfo.level}</span>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Zap className="h-4 w-4 text-[#FF6030]" />
-                        <span>{levelInfo.totalXp} XP</span>
-                      </div>
-                    </div>
-                    {!levelInfo.isMaxLevel && levelInfo.nextLevel && (
-                      <div className="text-right text-sm text-muted-foreground">
-                        <span>До уровня {levelInfo.nextLevel.level}</span>
-                        <p className="font-medium text-foreground">{levelInfo.xpToNextLevel - levelInfo.xpInCurrentLevel} XP</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <Progress 
-                    value={levelInfo.progressPercent} 
-                    className="h-2"
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex items-start gap-6">
+                <div className="relative">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    data-testid="input-avatar-file"
                   />
-                  
-                  {!levelInfo.isMaxLevel && levelInfo.nextLevel && (
-                    <p className="text-xs text-muted-foreground">
-                      Следующий уровень: {levelInfo.nextLevel.title}
-                    </p>
+                  {isEditing ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="cursor-pointer" data-testid="button-avatar-menu">
+                          <Avatar className="w-24 h-24 border-2 border-border/30">
+                            <AvatarImage src={avatarUrl || ""} />
+                            <AvatarFallback 
+                              className="text-2xl text-white font-medium"
+                              style={{ backgroundColor: getColorFromName(fullName) }}
+                            >
+                              {fullName ? fullName.charAt(0).toUpperCase() : "А"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {avatarUrl ? (
+                          <>
+                            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Заменить
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleDeleteAvatar} className="text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Удалить
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Загрузить аватарку
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <UserAvatar 
+                      avatarUrl={avatarUrl}
+                      name={fullName || "Аноним"}
+                      size="xl"
+                      className="w-24 h-24"
+                    />
+                  )}
+                  {saveProfileMutation.isPending && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                      <Loader2 className="h-6 w-6 animate-spin text-white" />
+                    </div>
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Separator />
-        
-        <div className="space-y-6">
-          <h2 className="font-semibold text-lg">Личная информация</h2>
-          
-          <Card className="border-border/50">
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Имя</Label>
-                  <Input 
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Иван Петров"
-                    data-testid="input-fullname"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input defaultValue={user?.email || ""} disabled />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>О себе</Label>
-                <Input 
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Product Designer с 5-летним опытом"
-                  data-testid="input-bio"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Компания</Label>
-                  <Input 
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    placeholder="Яндекс"
-                    data-testid="input-company"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Город</Label>
-                  <Input 
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Москва"
-                    data-testid="input-location"
-                  />
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Социальные сети</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <SiTelegram className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold">{fullName || "Пользователь"}</h1>
+                  <p className="text-muted-foreground">{bio || "Дизайнер"}</p>
+                  {!isEditing && hasSocialLinks && (
+                    <div className="flex gap-2 mt-3">
+                      {telegramLink && (
+                        <a href={telegramLink} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                            <SiTelegram className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
+                      {behanceLink && (
+                        <a href={behanceLink} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                            <SiBehance className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
+                      {dribbbleLink && (
+                        <a href={dribbbleLink} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                            <SiDribbble className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
                     </div>
-                    <Input 
-                      placeholder="https://t.me/username" 
-                      value={telegramLink}
-                      onChange={(e) => setTelegramLink(e.target.value)}
-                      data-testid="input-telegram-link"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <SiBehance className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <Input 
-                      placeholder="https://behance.net/username" 
-                      value={behanceLink}
-                      onChange={(e) => setBehanceLink(e.target.value)}
-                      data-testid="input-behance-link"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <SiDribbble className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <Input 
-                      placeholder="https://dribbble.com/username" 
-                      value={dribbbleLink}
-                      onChange={(e) => setDribbbleLink(e.target.value)}
-                      data-testid="input-dribbble-link"
-                    />
-                  </div>
+                  )}
                 </div>
               </div>
               
-              {hasChanges && (
-                <Button 
-                  className="w-full mt-4 bg-[#FF6030] hover:bg-[#E55525]" 
-                  onClick={handleSave}
-                  disabled={saveProfileMutation.isPending}
-                  data-testid="button-save-profile"
+              {!isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="gap-2"
+                  data-testid="button-edit-profile"
                 >
-                  {saveProfileMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Сохранение...
-                    </>
-                  ) : (
-                    "Сохранить изменения"
-                  )}
+                  <Pencil className="h-4 w-4" />
+                  Редактировать
                 </Button>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            {isEditing && (
+              <>
+                <Separator className="my-6" />
+                
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Имя</Label>
+                      <Input 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Иван Петров"
+                        data-testid="input-fullname"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input defaultValue={user?.email || ""} disabled />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>О себе</Label>
+                    <Input 
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="Product Designer с 5-летним опытом"
+                      data-testid="input-bio"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Компания</Label>
+                      <Input 
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        placeholder="Яндекс"
+                        data-testid="input-company"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Город</Label>
+                      <Input 
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="Москва"
+                        data-testid="input-location"
+                      />
+                    </div>
+                  </div>
+
+                  <Separator className="my-4" />
+
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium">Социальные сети</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <SiTelegram className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <Input 
+                          placeholder="https://t.me/username" 
+                          value={telegramLink}
+                          onChange={(e) => setTelegramLink(e.target.value)}
+                          data-testid="input-telegram-link"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <SiBehance className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <Input 
+                          placeholder="https://behance.net/username" 
+                          value={behanceLink}
+                          onChange={(e) => setBehanceLink(e.target.value)}
+                          data-testid="input-behance-link"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <SiDribbble className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <Input 
+                          placeholder="https://dribbble.com/username" 
+                          value={dribbbleLink}
+                          onChange={(e) => setDribbbleLink(e.target.value)}
+                          data-testid="input-dribbble-link"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleCancel}
+                      data-testid="button-cancel-edit"
+                    >
+                      Отмена
+                    </Button>
+                    <Button 
+                      className="flex-1 bg-[#2D2D2D] hover:bg-[#3D3D3D]" 
+                      onClick={handleSave}
+                      disabled={!hasChanges || saveProfileMutation.isPending}
+                      data-testid="button-save-profile"
+                    >
+                      {saveProfileMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Сохранение...
+                        </>
+                      ) : (
+                        "Сохранить"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
     </MainLayout>
   );
+}
+
+const avatarColors = [
+  "#34C759",
+  "#FF6030",
+  "#007AFF",
+  "#AF52DE",
+  "#FF9500",
+  "#5856D6",
+  "#FF2D55",
+  "#00C7BE",
+  "#32ADE6",
+  "#FF3B30",
+];
+
+function getColorFromName(name?: string | null): string {
+  if (!name) return avatarColors[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % avatarColors.length;
+  return avatarColors[index];
 }

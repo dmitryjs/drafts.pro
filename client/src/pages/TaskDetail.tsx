@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import UserAvatar from "@/components/UserAvatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,6 +129,7 @@ export default function TaskDetail() {
   }
 
   const authorName = task.author || task.authorName || "Аноним";
+  const authorId = task.authorId || null;
   const attachments = task.attachments || [];
   const visibleAttachments = attachments.slice(0, 4);
   const remainingCount = Math.max(0, attachments.length - 4);
@@ -211,14 +212,19 @@ export default function TaskDetail() {
               </button>
             </Link>
             
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE]">
-              <Avatar className="h-6 w-6">
-                <AvatarFallback className="text-xs bg-[#159931] text-white">
-                  {authorName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
-            </div>
+            {authorId ? (
+              <Link href={`/users/${authorId}`}>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors cursor-pointer">
+                  <UserAvatar name={authorName} size="sm" />
+                  <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
+                </div>
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE]">
+                <UserAvatar name={authorName} size="sm" />
+                <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
+              </div>
+            )}
           </div>
           
           {/* Right: Actions */}

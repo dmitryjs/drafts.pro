@@ -52,6 +52,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       image: "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=600&h=600&fit=crop",
       collection: "Space cats",
       owner: "Dizplazer",
+      profileId: 2,
       votes: 0,
     },
     opponent: null,
@@ -70,6 +71,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=600&fit=crop",
       collection: "Nature",
       owner: "Artist123",
+      profileId: 3,
       votes: 0,
     },
     opponent: {
@@ -78,6 +80,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       image: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&h=600&fit=crop",
       collection: "Tech Art",
       owner: "Designer456",
+      profileId: 4,
       votes: 0,
     },
     timeRemaining: null,
@@ -95,6 +98,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       image: "https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=600&h=600&fit=crop",
       collection: "Space cats",
       owner: "Dizplazer",
+      profileId: 2,
       votes: 999999,
     },
     opponent: {
@@ -103,6 +107,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop",
       collection: "7Heaven",
       owner: "Dmitry Galkin",
+      profileId: 1,
       votes: 900999,
     },
     timeRemaining: "23 часа 45 минут",
@@ -120,6 +125,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       image: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&h=600&fit=crop",
       collection: "Abstract Art",
       owner: "Winner",
+      profileId: 5,
       votes: 1500000,
     },
     opponent: {
@@ -128,6 +134,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       image: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=600&h=600&fit=crop",
       collection: "Colors",
       owner: "RunnerUp",
+      profileId: 6,
       votes: 1200000,
     },
     timeRemaining: null,
@@ -383,13 +390,15 @@ export default function BattleDetail() {
           {/* Creator Side */}
           <div data-testid="creator-section">
             {/* Author with avatar ABOVE image */}
-            <div className="flex items-center gap-2 mb-3 cursor-pointer hover-elevate rounded-lg p-1 -ml-1">
-              <UserAvatar name={battle.creator.owner} size="md" />
-              <div>
-                <p className="text-xs text-muted-foreground">Создатель</p>
-                <p className="font-medium text-sm text-[#1D1D1F]">{battle.creator.owner}</p>
+            <Link href={`/users/${battle.creator.profileId}`}>
+              <div className="flex items-center gap-2 mb-3 cursor-pointer hover-elevate rounded-lg p-1 -ml-1">
+                <UserAvatar name={battle.creator.owner} size="md" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Создатель</p>
+                  <p className="font-medium text-sm text-[#1D1D1F]">{battle.creator.owner}</p>
+                </div>
               </div>
-            </div>
+            </Link>
             
             {/* Image */}
             <div className="aspect-square rounded-xl overflow-hidden bg-[#2D2D2D] mb-3">
@@ -415,13 +424,15 @@ export default function BattleDetail() {
             {hasOpponent ? (
               <>
                 {/* Author with avatar ABOVE image */}
-                <div className="flex items-center gap-2 mb-3 cursor-pointer hover-elevate rounded-lg p-1 -ml-1">
-                  <UserAvatar name={battle.opponent.owner} size="md" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Оппонент</p>
-                    <p className="font-medium text-sm text-[#1D1D1F]">{battle.opponent.owner}</p>
+                <Link href={`/users/${battle.opponent.profileId}`}>
+                  <div className="flex items-center gap-2 mb-3 cursor-pointer hover-elevate rounded-lg p-1 -ml-1">
+                    <UserAvatar name={battle.opponent.owner} size="md" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Оппонент</p>
+                      <p className="font-medium text-sm text-[#1D1D1F]">{battle.opponent.owner}</p>
+                    </div>
                   </div>
-                </div>
+                </Link>
                 
                 {/* Image */}
                 <div className="aspect-square rounded-xl overflow-hidden bg-[#2D2D2D] mb-3">

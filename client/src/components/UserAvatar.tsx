@@ -22,13 +22,37 @@ const textSizeClasses = {
   xl: "text-lg",
 };
 
+const avatarColors = [
+  "#34C759",
+  "#FF6030",
+  "#007AFF",
+  "#AF52DE",
+  "#FF9500",
+  "#5856D6",
+  "#FF2D55",
+  "#00C7BE",
+  "#32ADE6",
+  "#FF3B30",
+];
+
 function getInitial(name?: string | null): string {
   if (!name) return "А";
   return name.charAt(0).toUpperCase();
 }
 
+function getColorFromName(name?: string | null): string {
+  if (!name) return avatarColors[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % avatarColors.length;
+  return avatarColors[index];
+}
+
 export default function UserAvatar({ avatarUrl, name, size = "md", className }: UserAvatarProps) {
   const initial = getInitial(name);
+  const bgColor = getColorFromName(name);
 
   return (
     <Avatar className={cn(sizeClasses[size], className)}>
@@ -37,9 +61,10 @@ export default function UserAvatar({ avatarUrl, name, size = "md", className }: 
       ) : null}
       <AvatarFallback 
         className={cn(
-          "bg-[#34C759] text-white font-medium",
+          "text-white font-medium",
           textSizeClasses[size]
         )}
+        style={{ backgroundColor: bgColor }}
       >
         {initial}
       </AvatarFallback>

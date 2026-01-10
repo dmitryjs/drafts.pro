@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import UserAvatar from "@/components/UserAvatar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   DropdownMenu,
@@ -382,11 +382,7 @@ export default function Tasks() {
                 >
                   {/* Author Avatar + Name -> Arrow -> Category Tag */}
                   <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                        {(task.author || task.authorName || "A").charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar name={task.author || task.authorName || "Аноним"} size="sm" />
                     <span className="text-sm text-[#1D1D1F] font-medium">{task.author || task.authorName || "Аноним"}</span>
                     <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     <Badge variant="secondary" className="text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0">
