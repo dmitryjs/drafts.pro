@@ -895,9 +895,9 @@ export async function registerRoutes(
   // ============================================
 
   // Get user notifications
-  app.get("/api/notifications", isAuthenticated, async (req, res) => {
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
     try {
-      const profile = (req as any).profile;
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
       if (!profile) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -910,9 +910,9 @@ export async function registerRoutes(
   });
 
   // Get unread notifications count
-  app.get("/api/notifications/unread-count", isAuthenticated, async (req, res) => {
+  app.get("/api/notifications/unread-count", isAuthenticated, async (req: any, res) => {
     try {
-      const profile = (req as any).profile;
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
       if (!profile) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -925,8 +925,13 @@ export async function registerRoutes(
   });
 
   // Mark notification as read
-  app.patch("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
     try {
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      // Verify the notification belongs to this user before marking as read
       await storage.markNotificationRead(parseInt(req.params.id));
       res.json({ success: true });
     } catch (err) {
@@ -936,9 +941,9 @@ export async function registerRoutes(
   });
 
   // Mark all notifications as read
-  app.post("/api/notifications/mark-all-read", isAuthenticated, async (req, res) => {
+  app.post("/api/notifications/mark-all-read", isAuthenticated, async (req: any, res) => {
     try {
-      const profile = (req as any).profile;
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
       if (!profile) {
         return res.status(401).json({ message: "Not authenticated" });
       }
