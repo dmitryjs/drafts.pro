@@ -130,10 +130,78 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
     },
   });
 
+  const createTaskMutation = useMutation({
+    mutationFn: async (data: {
+      title: string;
+      description: string;
+      category: string;
+      level: string;
+      tags?: string[];
+      sphere?: string;
+    }) => {
+      const res = await apiRequest("POST", "/api/tasks", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Задача создана",
+        description: "Ваша задача успешно опубликована",
+      });
+      onOpenChange(false);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось создать задачу. Попробуйте снова.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = () => {
-    console.log({ category, level, title, description, tags, spheres, attachments });
-    onOpenChange(false);
-    resetForm();
+    if (!title.trim()) {
+      toast({
+        title: "Ошибка",
+        description: "Введите название задачи",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!description.trim()) {
+      toast({
+        title: "Ошибка",
+        description: "Введите описание задачи",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!category) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите категорию",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!level) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите уровень сложности",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createTaskMutation.mutate({
+      title: title.trim(),
+      description: description.trim(),
+      category,
+      level,
+      tags: tags.length > 0 ? tags : undefined,
+      sphere: spheres.length > 0 ? spheres[0] : undefined,
+    });
   };
 
   const resetForm = () => {

@@ -491,7 +491,7 @@ export default function BattleDetail() {
             </div>
             
             <Button 
-              className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white rounded-xl"
+              className="w-full bg-[#FF6030] hover:bg-[#E55525] text-white rounded-xl"
               onClick={handleVote}
               disabled={!selectedVote}
               data-testid="button-submit-vote"

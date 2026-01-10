@@ -215,17 +215,43 @@ export async function registerRoutes(
 
   app.post(api.tasks.create.path, async (req, res) => {
     try {
-      const input = api.tasks.create.input.parse(req.body);
-      const task = await storage.createTask(input);
+      const { title, description, category, level, tags, sphere, authorId, status, attachments } = req.body;
+      
+      if (!title || !description || !category || !level) {
+        return res.status(400).json({ message: "Заполните все обязательные поля" });
+      }
+      
+      // Generate slug from title
+      const slugBase = title
+        .toLowerCase()
+        .replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 50);
+      const uniqueSuffix = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+      const slug = `${slugBase}-${uniqueSuffix}`;
+      
+      const task = await storage.createTask({
+        slug,
+        title,
+        description,
+        category,
+        level,
+        tags: tags || null,
+        sphere: sphere || null,
+        authorId: authorId || null,
+        status: status || 'published',
+        attachments: attachments || null,
+      });
       res.status(201).json(task);
     } catch (err) {
+      console.error('Error creating task:', err);
       if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
         });
       }
-      throw err;
+      res.status(500).json({ message: "Ошибка при создании задачи" });
     }
   });
 
