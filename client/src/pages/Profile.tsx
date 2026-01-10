@@ -26,6 +26,29 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
+const avatarColors = [
+  "#34C759",
+  "#FF6030",
+  "#007AFF",
+  "#AF52DE",
+  "#FF9500",
+  "#5856D6",
+  "#FF2D55",
+  "#00C7BE",
+  "#32ADE6",
+  "#FF3B30",
+];
+
+function getColorFromName(name?: string | null): string {
+  if (!name) return avatarColors[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % avatarColors.length;
+  return avatarColors[index];
+}
+
 export default function Profile() {
   const [, navigate] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +88,7 @@ export default function Profile() {
         bio: profileData.bio || "",
         company: profileData.company || "",
         location: profileData.location || "",
-        telegramLink: (profileData as any).telegramLink || "",
+        telegramLink: profileData.telegramUsername || "",
         behanceLink: (profileData as any).behanceLink || "",
         dribbbleLink: (profileData as any).dribbbleLink || "",
         avatarUrl: profileData.avatarUrl || null,
@@ -97,8 +120,8 @@ export default function Profile() {
 
   const saveProfileMutation = useMutation({
     mutationFn: async (data: Partial<ProfileType>) => {
-      if (!user?.id) throw new Error("Not authenticated");
-      return apiRequest("PATCH", `/api/profiles/${user.id}`, data);
+      if (!profileData?.id) throw new Error("Profile not loaded");
+      return apiRequest("PATCH", `/api/profiles/${profileData.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
@@ -173,7 +196,8 @@ export default function Profile() {
     setAvatarUrl(null);
   };
 
-  const hasSocialLinks = telegramLink || behanceLink || dribbbleLink;
+  const displayName = fullName || user?.firstName || "Пользователь";
+  const displayBio = bio || "Дизайнер";
   
   const rightPanel = (
     <div className="space-y-6">
@@ -314,9 +338,9 @@ export default function Profile() {
                             <AvatarImage src={avatarUrl || ""} />
                             <AvatarFallback 
                               className="text-2xl text-white font-medium"
-                              style={{ backgroundColor: getColorFromName(fullName) }}
+                              style={{ backgroundColor: getColorFromName(displayName) }}
                             >
-                              {fullName ? fullName.charAt(0).toUpperCase() : "А"}
+                              {displayName.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                         </button>
@@ -344,7 +368,7 @@ export default function Profile() {
                   ) : (
                     <UserAvatar 
                       avatarUrl={avatarUrl}
-                      name={fullName || "Аноним"}
+                      name={displayName}
                       size="xl"
                       className="w-24 h-24"
                     />
@@ -356,33 +380,8 @@ export default function Profile() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h1 className="text-2xl font-bold">{fullName || "Пользователь"}</h1>
-                  <p className="text-muted-foreground">{bio || "Дизайнер"}</p>
-                  {!isEditing && hasSocialLinks && (
-                    <div className="flex gap-2 mt-3">
-                      {telegramLink && (
-                        <a href={telegramLink} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                            <SiTelegram className="h-4 w-4" />
-                          </Button>
-                        </a>
-                      )}
-                      {behanceLink && (
-                        <a href={behanceLink} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                            <SiBehance className="h-4 w-4" />
-                          </Button>
-                        </a>
-                      )}
-                      {dribbbleLink && (
-                        <a href={dribbbleLink} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
-                            <SiDribbble className="h-4 w-4" />
-                          </Button>
-                        </a>
-                      )}
-                    </div>
-                  )}
+                  <h1 className="text-2xl font-bold">{displayName}</h1>
+                  <p className="text-muted-foreground">{displayBio}</p>
                 </div>
               </div>
               
@@ -400,151 +399,154 @@ export default function Profile() {
               )}
             </div>
 
-            {isEditing && (
-              <>
-                <Separator className="my-6" />
-                
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Имя</Label>
-                      <Input 
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Иван Петров"
-                        data-testid="input-fullname"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input defaultValue={user?.email || ""} disabled />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>О себе</Label>
+            <Separator className="my-6" />
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Имя</Label>
+                  {isEditing ? (
                     <Input 
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      placeholder="Product Designer с 5-летним опытом"
-                      data-testid="input-bio"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Введите имя"
+                      data-testid="input-fullname"
                     />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Компания</Label>
-                      <Input 
-                        value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                        placeholder="Яндекс"
-                        data-testid="input-company"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Город</Label>
-                      <Input 
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        placeholder="Москва"
-                        data-testid="input-location"
-                      />
-                    </div>
-                  </div>
+                  ) : (
+                    <Input value={fullName || "—"} disabled className="bg-muted/30" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input value={user?.email || ""} disabled className="bg-muted/30" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>О себе</Label>
+                {isEditing ? (
+                  <Input 
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Product Designer с 5-летним опытом"
+                    data-testid="input-bio"
+                  />
+                ) : (
+                  <Input value={bio || "—"} disabled className="bg-muted/30" />
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Компания</Label>
+                  {isEditing ? (
+                    <Input 
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      placeholder="Яндекс"
+                      data-testid="input-company"
+                    />
+                  ) : (
+                    <Input value={company || "—"} disabled className="bg-muted/30" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Город</Label>
+                  {isEditing ? (
+                    <Input 
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="Москва"
+                      data-testid="input-location"
+                    />
+                  ) : (
+                    <Input value={location || "—"} disabled className="bg-muted/30" />
+                  )}
+                </div>
+              </div>
 
-                  <Separator className="my-4" />
+              <Separator className="my-4" />
 
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium">Социальные сети</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                          <SiTelegram className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <Input 
-                          placeholder="https://t.me/username" 
-                          value={telegramLink}
-                          onChange={(e) => setTelegramLink(e.target.value)}
-                          data-testid="input-telegram-link"
-                        />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                          <SiBehance className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <Input 
-                          placeholder="https://behance.net/username" 
-                          value={behanceLink}
-                          onChange={(e) => setBehanceLink(e.target.value)}
-                          data-testid="input-behance-link"
-                        />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                          <SiDribbble className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <Input 
-                          placeholder="https://dribbble.com/username" 
-                          value={dribbbleLink}
-                          onChange={(e) => setDribbbleLink(e.target.value)}
-                          data-testid="input-dribbble-link"
-                        />
-                      </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Социальные сети</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <SiTelegram className="h-4 w-4 text-muted-foreground" />
                     </div>
+                    {isEditing ? (
+                      <Input 
+                        placeholder="https://t.me/username" 
+                        value={telegramLink}
+                        onChange={(e) => setTelegramLink(e.target.value)}
+                        data-testid="input-telegram-link"
+                      />
+                    ) : (
+                      <Input value={telegramLink || "—"} disabled className="bg-muted/30" />
+                    )}
                   </div>
-                  
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      variant="outline"
-                      className="flex-1"
-                      onClick={handleCancel}
-                      data-testid="button-cancel-edit"
-                    >
-                      Отмена
-                    </Button>
-                    <Button 
-                      className="flex-1 bg-[#2D2D2D] hover:bg-[#3D3D3D]" 
-                      onClick={handleSave}
-                      disabled={!hasChanges || saveProfileMutation.isPending}
-                      data-testid="button-save-profile"
-                    >
-                      {saveProfileMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Сохранение...
-                        </>
-                      ) : (
-                        "Сохранить"
-                      )}
-                    </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <SiBehance className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    {isEditing ? (
+                      <Input 
+                        placeholder="https://behance.net/username" 
+                        value={behanceLink}
+                        onChange={(e) => setBehanceLink(e.target.value)}
+                        data-testid="input-behance-link"
+                      />
+                    ) : (
+                      <Input value={behanceLink || "—"} disabled className="bg-muted/30" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                      <SiDribbble className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    {isEditing ? (
+                      <Input 
+                        placeholder="https://dribbble.com/username" 
+                        value={dribbbleLink}
+                        onChange={(e) => setDribbbleLink(e.target.value)}
+                        data-testid="input-dribbble-link"
+                      />
+                    ) : (
+                      <Input value={dribbbleLink || "—"} disabled className="bg-muted/30" />
+                    )}
                   </div>
                 </div>
-              </>
-            )}
+              </div>
+              
+              {isEditing && (
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleCancel}
+                    data-testid="button-cancel-edit"
+                  >
+                    Отмена
+                  </Button>
+                  <Button 
+                    className="flex-1 bg-[#FF6030] hover:bg-[#E5562B] text-white" 
+                    onClick={handleSave}
+                    disabled={!hasChanges || saveProfileMutation.isPending}
+                    data-testid="button-save-profile"
+                  >
+                    {saveProfileMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Сохранение...
+                      </>
+                    ) : (
+                      "Сохранить"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </motion.div>
     </MainLayout>
   );
-}
-
-const avatarColors = [
-  "#34C759",
-  "#FF6030",
-  "#007AFF",
-  "#AF52DE",
-  "#FF9500",
-  "#5856D6",
-  "#FF2D55",
-  "#00C7BE",
-  "#32ADE6",
-  "#FF3B30",
-];
-
-function getColorFromName(name?: string | null): string {
-  if (!name) return avatarColors[0];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % avatarColors.length;
-  return avatarColors[index];
 }
