@@ -153,9 +153,9 @@ export default function Profile() {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 500KB for base64 storage)
-      if (file.size > 500 * 1024) {
-        toast({ title: "Файл слишком большой. Максимум 500KB", variant: "destructive" });
+      // Check file size (max 3MB for base64 storage)
+      if (file.size > 3 * 1024 * 1024) {
+        toast({ title: "Файл слишком большой. Максимум 3MB", variant: "destructive" });
         return;
       }
       
@@ -254,8 +254,8 @@ export default function Profile() {
                     <button className="cursor-pointer" data-testid="button-avatar-menu">
                       <Avatar className="w-24 h-24 border-2 border-border/30">
                         <AvatarImage src={avatarUrl || ""} />
-                        <AvatarFallback className="text-2xl bg-muted text-muted-foreground">
-                          {fullName ? fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "ИП"}
+                        <AvatarFallback className="text-2xl bg-[#34C759] text-white font-medium">
+                          {fullName ? fullName.charAt(0).toUpperCase() : "А"}
                         </AvatarFallback>
                       </Avatar>
                       {saveAvatarMutation.isPending && (

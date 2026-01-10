@@ -12,7 +12,7 @@ import {
   LogOut,
   LogIn
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import UserAvatar from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { 
   DropdownMenu, 
@@ -58,16 +58,6 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
     logout();
   };
 
-  const getInitials = () => {
-    if (user?.firstName) {
-      return user.firstName.slice(0, 2).toUpperCase();
-    }
-    if (user?.email) {
-      return user.email.slice(0, 2).toUpperCase();
-    }
-    return "U";
-  };
-
   return (
     <div className="min-h-screen bg-background flex flex-col w-full">
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border/50 px-4 h-14 flex items-center justify-between gap-2">
@@ -87,10 +77,11 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full ring-2 ring-transparent hover:ring-primary/20 transition-all">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={avatarUrl} />
-                    <AvatarFallback className="text-xs">{getInitials()}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar 
+                    avatarUrl={avatarUrl} 
+                    name={user?.firstName || user?.email}
+                    size="md"
+                  />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

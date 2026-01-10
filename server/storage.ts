@@ -38,6 +38,7 @@ export interface IStorage {
 
   // Tasks
   getTasks(filters?: { category?: string; level?: string; status?: string }): Promise<Task[]>;
+  getTasksByAuthor(authorId: number): Promise<Task[]>;
   getTaskBySlug(slug: string): Promise<Task | undefined>;
   getTaskById(id: number): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
@@ -52,11 +53,13 @@ export interface IStorage {
 
   // Battles
   getBattles(filters?: { status?: string; category?: string }): Promise<Battle[]>;
+  getBattlesByProfile(profileId: number): Promise<Battle[]>;
   getBattleBySlug(slug: string): Promise<Battle | undefined>;
   createBattle(battle: InsertBattle): Promise<Battle>;
 
   // Battle Entries
   getBattleEntries(battleId: number): Promise<BattleEntry[]>;
+  getBattleEntriesByUser(userId: number): Promise<BattleEntry[]>;
   createBattleEntry(entry: InsertBattleEntry): Promise<BattleEntry>;
   createBattleVote(vote: InsertBattleVote): Promise<BattleVote>;
   getBattleVote(battleId: number, voterId: number): Promise<BattleVote | undefined>;
@@ -208,6 +211,10 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getTasksByAuthor(authorId: number): Promise<Task[]> {
+    return await db.select().from(tasks).where(eq(tasks.authorId, authorId));
+  }
+
   async getTaskBySlug(slug: string): Promise<Task | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.slug, slug));
     return task;
@@ -265,6 +272,10 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getBattlesByProfile(profileId: number): Promise<Battle[]> {
+    return await db.select().from(battles).where(eq(battles.createdBy, profileId));
+  }
+
   async getBattleBySlug(slug: string): Promise<Battle | undefined> {
     const [battle] = await db.select().from(battles).where(eq(battles.slug, slug));
     return battle;
@@ -278,6 +289,10 @@ export class DatabaseStorage implements IStorage {
   // Battle Entries
   async getBattleEntries(battleId: number): Promise<BattleEntry[]> {
     return await db.select().from(battleEntries).where(eq(battleEntries.battleId, battleId));
+  }
+
+  async getBattleEntriesByUser(userId: number): Promise<BattleEntry[]> {
+    return await db.select().from(battleEntries).where(eq(battleEntries.userId, userId));
   }
 
   async createBattleEntry(entry: InsertBattleEntry): Promise<BattleEntry> {

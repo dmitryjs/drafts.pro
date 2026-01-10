@@ -191,6 +191,55 @@ export async function registerRoutes(
     }
   });
 
+  // Public profile endpoint - returns profile with tasks and battles
+  app.get("/api/profiles/:id/public", async (req, res) => {
+    try {
+      const profileId = parseInt(req.params.id);
+      if (isNaN(profileId)) {
+        return res.status(400).json({ message: "Неверный ID профиля" });
+      }
+      
+      const profile = await storage.getProfileById(profileId);
+      if (!profile) {
+        return res.status(404).json({ message: "Профиль не найден" });
+      }
+
+      // Get tasks created by this user (via userId link)
+      let userTasks: any[] = [];
+      let battleEntries: any[] = [];
+      if (profile.userId) {
+        userTasks = await storage.getTasksByAuthor(profile.userId);
+        battleEntries = await storage.getBattleEntriesByUser(profile.userId);
+      }
+
+      // Get battles created by this profile
+      const createdBattles = await storage.getBattlesByProfile(profileId);
+      
+      // Get unique battle IDs from entries to fetch participated battles
+      const entryBattleIds = Array.from(new Set(battleEntries.map(e => e.battleId)));
+      const participatedBattles: any[] = [];
+      const existingBattles = await storage.getBattles();
+      for (const battleId of entryBattleIds) {
+        const battle = existingBattles.find(b => b.id === battleId);
+        if (battle && !createdBattles.find(cb => cb.id === battle.id)) {
+          participatedBattles.push(battle);
+        }
+      }
+
+      // Combine created and participated battles
+      const allUserBattles = [...createdBattles, ...participatedBattles];
+
+      res.json({
+        profile,
+        tasks: userTasks,
+        battles: allUserBattles,
+      });
+    } catch (err) {
+      console.error("Error fetching public profile:", err);
+      res.status(500).json({ message: "Ошибка сервера" });
+    }
+  });
+
   // ============================================
   // TASKS (ЗАДАЧИ)
   // ============================================

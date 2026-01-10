@@ -13,6 +13,7 @@ import Battles from "@/pages/Battles";
 import BattleDetail from "@/pages/BattleDetail";
 import Assessment from "@/pages/Assessment";
 import Profile from "@/pages/Profile";
+import UserProfile from "@/pages/UserProfile";
 import Drafts from "@/pages/Drafts";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/auth" component={Auth} />
       <Route path="/battles" component={Battles} />
       <Route path="/battles/:slug" component={BattleDetail} />
+      <Route path="/users/:id" component={UserProfile} />
       <Route path="/assessment" component={Assessment} />
       <Route path="/profile">
         <ProtectedRoute>

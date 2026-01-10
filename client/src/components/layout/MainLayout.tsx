@@ -14,7 +14,7 @@ import {
   ChevronDown,
   Shield
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import UserAvatar from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -122,18 +122,6 @@ export default function MainLayout({
     logout();
   };
 
-  const getInitials = () => {
-    if (profile?.username) {
-      return profile.username.slice(0, 2).toUpperCase();
-    }
-    if (user?.firstName) {
-      return user.firstName.slice(0, 2).toUpperCase();
-    }
-    if (user?.email) {
-      return user.email.slice(0, 2).toUpperCase();
-    }
-    return "U";
-  };
 
   return (
     <div className="min-h-screen bg-[#F9F9F9] flex">
@@ -300,12 +288,11 @@ export default function MainLayout({
                     className="rounded-full"
                     data-testid="button-avatar"
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={profile?.avatarUrl || undefined} />
-                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                        {getInitials()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar 
+                      avatarUrl={profile?.avatarUrl} 
+                      name={profile?.username || user?.firstName || user?.email}
+                      size="md"
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

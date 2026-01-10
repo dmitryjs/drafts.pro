@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import UserAvatar from "@/components/UserAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -383,10 +383,8 @@ export default function BattleDetail() {
           {/* Creator Side */}
           <div data-testid="creator-section">
             {/* Author with avatar ABOVE image */}
-            <div className="flex items-center gap-2 mb-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs">{battle.creator.owner.charAt(0)}</AvatarFallback>
-              </Avatar>
+            <div className="flex items-center gap-2 mb-3 cursor-pointer hover-elevate rounded-lg p-1 -ml-1">
+              <UserAvatar name={battle.creator.owner} size="md" />
               <div>
                 <p className="text-xs text-muted-foreground">Создатель</p>
                 <p className="font-medium text-sm text-[#1D1D1F]">{battle.creator.owner}</p>
@@ -417,10 +415,8 @@ export default function BattleDetail() {
             {hasOpponent ? (
               <>
                 {/* Author with avatar ABOVE image */}
-                <div className="flex items-center gap-2 mb-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs bg-pink-200">{battle.opponent.owner?.charAt(0)}</AvatarFallback>
-                  </Avatar>
+                <div className="flex items-center gap-2 mb-3 cursor-pointer hover-elevate rounded-lg p-1 -ml-1">
+                  <UserAvatar name={battle.opponent.owner} size="md" />
                   <div>
                     <p className="text-xs text-muted-foreground">Оппонент</p>
                     <p className="font-medium text-sm text-[#1D1D1F]">{battle.opponent.owner}</p>
@@ -449,9 +445,7 @@ export default function BattleDetail() {
               <>
                 {/* Empty opponent slot */}
                 <div className="flex items-center gap-2 mb-3 opacity-50">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs bg-muted">?</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar name="?" size="md" />
                   <div>
                     <p className="text-xs text-muted-foreground">Оппонент</p>
                     <p className="font-medium text-sm text-muted-foreground">Ожидаем...</p>
@@ -678,11 +672,11 @@ export default function BattleDetail() {
           
           {/* Comment Input */}
           <div className="flex gap-3 mb-4">
-            <Avatar className="h-8 w-8 flex-shrink-0">
-              <AvatarFallback className="text-xs">
-                {user?.firstName?.charAt(0) || "?"}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar 
+              name={user?.firstName || user?.email} 
+              size="md" 
+              className="flex-shrink-0" 
+            />
             <div className="flex-1">
               <Textarea
                 placeholder="Что вы думаете об этом батле?"
@@ -720,9 +714,7 @@ export default function BattleDetail() {
               {comments.map((comment) => (
                 <div key={comment.id} className="border-t pt-4" data-testid={`comment-${comment.id}`}>
                   <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">{comment.author.charAt(0)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar name={comment.author} size="md" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm text-[#1D1D1F]">{comment.author}</span>
