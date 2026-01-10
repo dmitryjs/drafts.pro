@@ -153,12 +153,24 @@ export default function Profile() {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // In a real app, you'd upload to a file storage service
-      // For now, we'll use a blob URL and save it
-      const url = URL.createObjectURL(file);
-      setAvatarUrl(url);
-      // Auto-save avatar
-      saveAvatarMutation.mutate(url);
+      // Check file size (max 500KB for base64 storage)
+      if (file.size > 500 * 1024) {
+        toast({ title: "Файл слишком большой. Максимум 500KB", variant: "destructive" });
+        return;
+      }
+      
+      // Convert to base64 for persistent storage
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Url = reader.result as string;
+        setAvatarUrl(base64Url);
+        // Auto-save avatar as base64
+        saveAvatarMutation.mutate(base64Url);
+      };
+      reader.onerror = () => {
+        toast({ title: "Ошибка при чтении файла", variant: "destructive" });
+      };
+      reader.readAsDataURL(file);
     }
   };
 

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Home, 
   FileText, 
@@ -24,6 +25,7 @@ import {
 import { useHealth } from "@/hooks/use-data";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import type { Profile } from "@shared/schema";
 
 interface AppShellProps {
   children: ReactNode;
@@ -34,6 +36,15 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
   const [location] = useLocation();
   const { data: health } = useHealth();
   const { user, isLoading, logout } = useAuth();
+
+  // Fetch profile to get avatar
+  const { data: profile } = useQuery<Profile>({
+    queryKey: ["/api/profiles", user?.id],
+    enabled: !!user?.id,
+  });
+
+  // Use profile avatar or fallback to auth user avatar
+  const avatarUrl = profile?.avatarUrl || user?.profileImageUrl || undefined;
 
   const navItems = [
     { href: "/", icon: Home, label: "Главная" },
@@ -77,7 +88,7 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full ring-2 ring-transparent hover:ring-primary/20 transition-all">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.profileImageUrl || undefined} />
+                    <AvatarImage src={avatarUrl} />
                     <AvatarFallback className="text-xs">{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
