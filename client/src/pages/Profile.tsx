@@ -361,24 +361,22 @@ export default function Profile() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-
-              <div className="flex-1 pt-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-4 right-4 h-8 w-8"
-                      onClick={() => setIsEditModalOpen(true)}
-                      data-testid="button-edit-profile"
-                    >
-                      <Pencil className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Редактировать профиль</TooltipContent>
-                </Tooltip>
-              </div>
             </div>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-4 right-4 h-8 w-8"
+                  onClick={() => setIsEditModalOpen(true)}
+                  data-testid="button-edit-profile"
+                >
+                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Редактировать профиль</TooltipContent>
+            </Tooltip>
 
             <div className="mt-4">
               <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
