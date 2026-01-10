@@ -890,5 +890,223 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // NOTIFICATION ROUTES
+  // ============================================
+
+  // Get user notifications
+  app.get("/api/notifications", isAuthenticated, async (req, res) => {
+    try {
+      const profile = (req as any).profile;
+      if (!profile) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const notificationsList = await storage.getUserNotifications(profile.id);
+      res.json(notificationsList);
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  // Get unread notifications count
+  app.get("/api/notifications/unread-count", isAuthenticated, async (req, res) => {
+    try {
+      const profile = (req as any).profile;
+      if (!profile) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const count = await storage.getUnreadNotificationsCount(profile.id);
+      res.json({ count });
+    } catch (err) {
+      console.error("Error fetching unread count:", err);
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+
+  // Mark notification as read
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
+    try {
+      await storage.markNotificationRead(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Mark all notifications as read
+  app.post("/api/notifications/mark-all-read", isAuthenticated, async (req, res) => {
+    try {
+      const profile = (req as any).profile;
+      if (!profile) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      await storage.markAllNotificationsRead(profile.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error marking all notifications as read:", err);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  // ============================================
+  // COMPANY ROUTES (ADMIN)
+  // ============================================
+
+  // Get all companies (admin only)
+  app.get("/api/admin/companies", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const companiesList = await storage.getCompanies();
+      res.json(companiesList);
+    } catch (err) {
+      console.error("Error fetching companies:", err);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  // Create company (admin only)
+  app.post("/api/admin/companies", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, email, password, website, description, industry, size, logoUrl } = req.body;
+      const slug = name.toLowerCase()
+        .replace(/[а-яё]/gi, (c: string) => {
+          const ru: { [key: string]: string } = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya' };
+          return ru[c.toLowerCase()] || c;
+        })
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+
+      const company = await storage.createCompany({
+        name,
+        slug,
+        email,
+        password,
+        website,
+        description,
+        industry,
+        size,
+        logoUrl,
+      });
+      res.status(201).json(company);
+    } catch (err) {
+      console.error("Error creating company:", err);
+      res.status(500).json({ message: "Failed to create company" });
+    }
+  });
+
+  // Update company (admin only)
+  app.patch("/api/admin/companies/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const company = await storage.updateCompany(parseInt(req.params.id), req.body);
+      res.json(company);
+    } catch (err) {
+      console.error("Error updating company:", err);
+      res.status(500).json({ message: "Failed to update company" });
+    }
+  });
+
+  // Delete company (admin only)
+  app.delete("/api/admin/companies/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteCompany(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (err) {
+      console.error("Error deleting company:", err);
+      res.status(500).json({ message: "Failed to delete company" });
+    }
+  });
+
+  // ============================================
+  // ADMIN NOTIFICATION HELPER (for sending notifications)
+  // ============================================
+
+  // Helper function to send notification when admin takes action
+  const sendAdminNotification = async (
+    userId: number,
+    type: string,
+    title: string,
+    message: string,
+    metadata?: any
+  ) => {
+    try {
+      await storage.createNotification({
+        userId,
+        type,
+        title,
+        message,
+        metadata,
+      });
+    } catch (err) {
+      console.error("Error sending notification:", err);
+    }
+  };
+
+  // Admin: Reject battle with notification
+  app.post("/api/admin/battles/:id/reject", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const battleId = parseInt(req.params.id);
+      
+      // Get battle to find the creator
+      const battles = await storage.getBattles({});
+      const battle = battles.find((b: any) => b.id === battleId);
+      
+      if (!battle) {
+        return res.status(404).json({ message: "Battle not found" });
+      }
+
+      // Update battle status to rejected
+      await storage.updateBattle(battleId, { status: "rejected" });
+
+      // Send notification to the creator
+      if (battle.createdBy) {
+        await sendAdminNotification(
+          battle.createdBy,
+          "battle_rejected",
+          "Ваш батл отклонён",
+          reason || "Батл не прошёл модерацию",
+          { battleId, battleTitle: battle.title }
+        );
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error rejecting battle:", err);
+      res.status(500).json({ message: "Failed to reject battle" });
+    }
+  });
+
+  // Admin: Approve battle
+  app.post("/api/admin/battles/:id/approve", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const battleId = parseInt(req.params.id);
+      
+      const battles = await storage.getBattles({});
+      const battle = battles.find((b: any) => b.id === battleId);
+      
+      if (!battle) {
+        return res.status(404).json({ message: "Battle not found" });
+      }
+
+      await storage.updateBattle(battleId, { status: "upcoming" });
+
+      if (battle.createdBy) {
+        await sendAdminNotification(
+          battle.createdBy,
+          "battle_approved",
+          "Ваш батл одобрен",
+          "Ваш батл прошёл модерацию и будет опубликован",
+          { battleId, battleTitle: battle.title }
+        );
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error approving battle:", err);
+      res.status(500).json({ message: "Failed to approve battle" });
+    }
+  });
+
   return httpServer;
 }

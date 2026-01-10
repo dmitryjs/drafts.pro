@@ -49,7 +49,9 @@ import {
   FileText,
   TrendingUp,
   TrendingDown,
-  Activity
+  Activity,
+  Building2,
+  Upload
 } from "lucide-react";
 import {
   BarChart,
@@ -124,6 +126,23 @@ interface AssessmentQuestion {
   order: number | null;
 }
 
+interface Company {
+  id: number;
+  name: string;
+  slug: string;
+  email: string;
+  password: string | null;
+  logoUrl: string | null;
+  website: string | null;
+  description: string | null;
+  industry: string | null;
+  size: string | null;
+  tasksCreated: number;
+  battlesCreated: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 const CHART_COLORS = ["#FF6030", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"];
 
 export default function Admin() {
@@ -132,6 +151,7 @@ export default function Admin() {
   const queryClientInstance = useQueryClient();
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
   const [selectedSphere, setSelectedSphere] = useState("product");
   
   // Detail view states
@@ -139,6 +159,18 @@ export default function Admin() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedBattle, setSelectedBattle] = useState<Battle | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<AssessmentQuestion | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  
+  // New company form
+  const [newCompany, setNewCompany] = useState({
+    name: "",
+    email: "",
+    password: "",
+    website: "",
+    description: "",
+    industry: "",
+    size: "",
+  });
   
   const [newQuestion, setNewQuestion] = useState({
     question: "",
@@ -186,6 +218,11 @@ export default function Admin() {
       if (!res.ok) throw new Error("Failed to fetch questions");
       return res.json();
     },
+    enabled: isAdminCheck?.isAdmin === true,
+  });
+
+  const { data: companies } = useQuery<Company[]>({
+    queryKey: ["/api/admin/companies"],
     enabled: isAdminCheck?.isAdmin === true,
   });
 
@@ -276,6 +313,61 @@ export default function Admin() {
       queryClientInstance.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Задача удалена" });
+    },
+  });
+
+  const createCompanyMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/admin/companies", data);
+    },
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/companies"] });
+      setIsAddCompanyOpen(false);
+      setNewCompany({ name: "", email: "", password: "", website: "", description: "", industry: "", size: "" });
+      toast({ title: "Компания создана" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка создания компании", variant: "destructive" });
+    },
+  });
+
+  const updateCompanyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Company> }) => {
+      return apiRequest("PATCH", `/api/admin/companies/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/companies"] });
+      toast({ title: "Компания обновлена" });
+    },
+  });
+
+  const deleteCompanyMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/admin/companies/${id}`);
+    },
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/companies"] });
+      toast({ title: "Компания удалена" });
+    },
+  });
+
+  const approveBattleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("POST", `/api/admin/battles/${id}/approve`);
+    },
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/battles"] });
+      toast({ title: "Батл одобрен" });
+    },
+  });
+
+  const rejectBattleMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      return apiRequest("POST", `/api/admin/battles/${id}/reject`, { reason });
+    },
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/battles"] });
+      toast({ title: "Батл отклонён" });
     },
   });
 
@@ -406,7 +498,7 @@ export default function Admin() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-6 max-w-3xl">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Дашборд
@@ -426,6 +518,10 @@ export default function Admin() {
             <TabsTrigger value="tests" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Тесты
+            </TabsTrigger>
+            <TabsTrigger value="companies" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Компании
             </TabsTrigger>
           </TabsList>
 
@@ -909,6 +1005,54 @@ export default function Admin() {
                       <SelectItem value="graphic">Графический дизайн</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.json';
+                      input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (!file) return;
+                        
+                        try {
+                          const text = await file.text();
+                          const data = JSON.parse(text);
+                          
+                          if (!Array.isArray(data)) {
+                            toast({ title: "Неверный формат JSON. Ожидается массив вопросов", variant: "destructive" });
+                            return;
+                          }
+                          
+                          let successCount = 0;
+                          for (const q of data) {
+                            try {
+                              await apiRequest("POST", "/api/admin/questions", {
+                                specialization: selectedSphere,
+                                question: q.question,
+                                options: q.options || [],
+                                category: q.category || null,
+                                difficulty: q.difficulty || "Medium",
+                              });
+                              successCount++;
+                            } catch (err) {
+                              console.error("Failed to import question:", err);
+                            }
+                          }
+                          
+                          queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/questions"] });
+                          toast({ title: `Импортировано ${successCount} из ${data.length} вопросов` });
+                        } catch (err) {
+                          toast({ title: "Ошибка чтения JSON файла", variant: "destructive" });
+                        }
+                      };
+                      input.click();
+                    }}
+                    data-testid="button-upload-questions"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Загрузить JSON
+                  </Button>
                   <Dialog open={isAddQuestionOpen} onOpenChange={setIsAddQuestionOpen}>
                     <DialogTrigger asChild>
                       <Button data-testid="button-add-question">
@@ -1069,8 +1213,266 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Companies Tab */}
+          <TabsContent value="companies">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Компании ({companies?.length || 0})</CardTitle>
+                  <Dialog open={isAddCompanyOpen} onOpenChange={setIsAddCompanyOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-[#2D2D2D] hover:bg-[#3D3D3D]" data-testid="button-add-company">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Добавить компанию
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Добавить компанию</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Название компании *</Label>
+                          <Input
+                            value={newCompany.name}
+                            onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
+                            placeholder="ООО Компания"
+                            data-testid="input-company-name"
+                          />
+                        </div>
+                        <div>
+                          <Label>Email *</Label>
+                          <Input
+                            type="email"
+                            value={newCompany.email}
+                            onChange={(e) => setNewCompany({ ...newCompany, email: e.target.value })}
+                            placeholder="company@example.com"
+                            data-testid="input-company-email"
+                          />
+                        </div>
+                        <div>
+                          <Label>Пароль</Label>
+                          <Input
+                            type="password"
+                            value={newCompany.password}
+                            onChange={(e) => setNewCompany({ ...newCompany, password: e.target.value })}
+                            placeholder="Введите пароль"
+                            data-testid="input-company-password"
+                          />
+                        </div>
+                        <div>
+                          <Label>Веб-сайт</Label>
+                          <Input
+                            value={newCompany.website}
+                            onChange={(e) => setNewCompany({ ...newCompany, website: e.target.value })}
+                            placeholder="https://company.com"
+                            data-testid="input-company-website"
+                          />
+                        </div>
+                        <div>
+                          <Label>Индустрия</Label>
+                          <Select value={newCompany.industry} onValueChange={(v) => setNewCompany({ ...newCompany, industry: v })}>
+                            <SelectTrigger data-testid="select-company-industry">
+                              <SelectValue placeholder="Выберите индустрию" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="tech">IT / Технологии</SelectItem>
+                              <SelectItem value="fintech">Финтех</SelectItem>
+                              <SelectItem value="ecommerce">E-commerce</SelectItem>
+                              <SelectItem value="healthcare">Медицина</SelectItem>
+                              <SelectItem value="education">Образование</SelectItem>
+                              <SelectItem value="other">Другое</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Размер компании</Label>
+                          <Select value={newCompany.size} onValueChange={(v) => setNewCompany({ ...newCompany, size: v })}>
+                            <SelectTrigger data-testid="select-company-size">
+                              <SelectValue placeholder="Выберите размер" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1-10">1-10 сотрудников</SelectItem>
+                              <SelectItem value="11-50">11-50 сотрудников</SelectItem>
+                              <SelectItem value="51-200">51-200 сотрудников</SelectItem>
+                              <SelectItem value="201-500">201-500 сотрудников</SelectItem>
+                              <SelectItem value="500+">500+ сотрудников</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Описание</Label>
+                          <Textarea
+                            value={newCompany.description}
+                            onChange={(e) => setNewCompany({ ...newCompany, description: e.target.value })}
+                            placeholder="Краткое описание компании"
+                            rows={3}
+                            data-testid="textarea-company-description"
+                          />
+                        </div>
+                        <Button 
+                          className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D]"
+                          onClick={() => {
+                            if (!newCompany.name.trim() || !newCompany.email.trim()) {
+                              toast({ title: "Заполните обязательные поля", variant: "destructive" });
+                              return;
+                            }
+                            createCompanyMutation.mutate(newCompany);
+                          }}
+                          disabled={createCompanyMutation.isPending}
+                          data-testid="button-create-company"
+                        >
+                          {createCompanyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Создать компанию
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">ID</TableHead>
+                      <TableHead>Компания</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Индустрия</TableHead>
+                      <TableHead>Размер</TableHead>
+                      <TableHead>Задачи</TableHead>
+                      <TableHead>Батлы</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead>Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {companies?.map((company) => (
+                      <TableRow 
+                        key={company.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedCompany(company)}
+                        data-testid={`row-company-${company.id}`}
+                      >
+                        <TableCell className="text-muted-foreground">{company.id}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <span className="font-medium">{company.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{company.email}</TableCell>
+                        <TableCell>{company.industry || "—"}</TableCell>
+                        <TableCell>{company.size || "—"}</TableCell>
+                        <TableCell>{company.tasksCreated}</TableCell>
+                        <TableCell>{company.battlesCreated}</TableCell>
+                        <TableCell>
+                          <Badge variant={company.isActive ? "default" : "secondary"}>
+                            {company.isActive ? "Активна" : "Неактивна"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => updateCompanyMutation.mutate({ id: company.id, data: { isActive: !company.isActive } })}
+                              data-testid={`button-toggle-company-${company.id}`}
+                            >
+                              {company.isActive ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteCompanyMutation.mutate(company.id)}
+                              data-testid={`button-delete-company-${company.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!companies || companies.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                          Нет компаний
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
+
+      {/* Company Detail Dialog */}
+      <Dialog open={!!selectedCompany} onOpenChange={(open) => !open && setSelectedCompany(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Информация о компании</DialogTitle>
+          </DialogHeader>
+          {selectedCompany && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center">
+                  <Building2 className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedCompany.name}</h3>
+                  <p className="text-muted-foreground">{selectedCompany.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground text-xs">ID компании</Label>
+                  <p className="font-medium">{selectedCompany.id}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Slug</Label>
+                  <p className="font-medium font-mono text-sm">{selectedCompany.slug}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Индустрия</Label>
+                  <p className="font-medium">{selectedCompany.industry || "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Размер</Label>
+                  <p className="font-medium">{selectedCompany.size || "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Задачи создано</Label>
+                  <p className="font-medium">{selectedCompany.tasksCreated}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Батлы создано</Label>
+                  <p className="font-medium">{selectedCompany.battlesCreated}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Веб-сайт</Label>
+                  <p className="font-medium">{selectedCompany.website || "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Дата создания</Label>
+                  <p className="font-medium">
+                    {selectedCompany.createdAt ? new Date(selectedCompany.createdAt).toLocaleDateString("ru-RU") : "—"}
+                  </p>
+                </div>
+              </div>
+              {selectedCompany.description && (
+                <div className="pt-4 border-t">
+                  <Label className="text-muted-foreground text-xs">Описание</Label>
+                  <p className="text-sm mt-1">{selectedCompany.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* User Detail Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>

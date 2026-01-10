@@ -1,7 +1,7 @@
 import { db } from "./db";
 import {
   users, profiles, tasks, taskSolutions, taskDrafts, taskVotes, taskFavorites, battles, battleEntries, battleVotes,
-  skillAssessments, assessmentQuestions, mentors, mentorSlots, mentorBookings, mentorReviews,
+  skillAssessments, assessmentQuestions, mentors, mentorSlots, mentorBookings, mentorReviews, notifications, companies,
   type User, type InsertUser,
   type Profile, type InsertProfile,
   type Task, type InsertTask,
@@ -17,6 +17,8 @@ import {
   type MentorSlot, type InsertMentorSlot,
   type MentorBooking, type InsertMentorBooking,
   type MentorReview, type InsertMentorReview,
+  type Notification, type InsertNotification,
+  type Company, type InsertCompany,
 } from "@shared/schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 
@@ -107,6 +109,21 @@ export interface IStorage {
   createAssessmentQuestion(data: any): Promise<any>;
   updateAssessmentQuestion(id: number, data: any): Promise<any>;
   deleteAssessmentQuestion(id: number): Promise<void>;
+
+  // Notifications
+  getUserNotifications(userId: number): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationRead(id: number): Promise<void>;
+  markAllNotificationsRead(userId: number): Promise<void>;
+  getUnreadNotificationsCount(userId: number): Promise<number>;
+
+  // Companies
+  getCompanies(): Promise<Company[]>;
+  getCompanyById(id: number): Promise<Company | undefined>;
+  getCompanyBySlug(slug: string): Promise<Company | undefined>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  updateCompany(id: number, data: Partial<InsertCompany>): Promise<Company>;
+  deleteCompany(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -432,6 +449,61 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAssessmentQuestion(id: number): Promise<void> {
     await db.delete(assessmentQuestions).where(eq(assessmentQuestions.id, id));
+  }
+
+  // Notifications
+  async getUserNotifications(userId: number): Promise<Notification[]> {
+    return await db.select().from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification).returning();
+    return created;
+  }
+
+  async markNotificationRead(id: number): Promise<void> {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
+  }
+
+  async markAllNotificationsRead(userId: number): Promise<void> {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, userId));
+  }
+
+  async getUnreadNotificationsCount(userId: number): Promise<number> {
+    const result = await db.select().from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return result.length;
+  }
+
+  // Companies
+  async getCompanies(): Promise<Company[]> {
+    return await db.select().from(companies).orderBy(desc(companies.createdAt));
+  }
+
+  async getCompanyById(id: number): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.id, id));
+    return company;
+  }
+
+  async getCompanyBySlug(slug: string): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.slug, slug));
+    return company;
+  }
+
+  async createCompany(company: InsertCompany): Promise<Company> {
+    const [created] = await db.insert(companies).values(company).returning();
+    return created;
+  }
+
+  async updateCompany(id: number, data: Partial<InsertCompany>): Promise<Company> {
+    const [updated] = await db.update(companies).set(data).where(eq(companies.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCompany(id: number): Promise<void> {
+    await db.delete(companies).where(eq(companies.id, id));
   }
 }
 

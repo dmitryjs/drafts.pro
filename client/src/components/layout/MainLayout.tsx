@@ -25,12 +25,21 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
-import type { Profile } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { Profile, Notification } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import logoPath from "@assets/Logo_black_1767028620121.png";
 import CreateBattleModal from "@/components/modals/CreateBattleModal";
 import CreateTaskModal from "@/components/modals/CreateTaskModal";
+import { format, formatDistanceToNow } from "date-fns";
+import { ru } from "date-fns/locale";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -62,6 +71,8 @@ export default function MainLayout({
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isBattleModalOpen, setIsBattleModalOpen] = useState(false);
   
+  const queryClient = useQueryClient();
+  
   const { data: profile } = useQuery<Profile>({
     queryKey: ['/api/profiles', user?.id],
     enabled: !!user?.id,
@@ -73,6 +84,39 @@ export default function MainLayout({
   });
   
   const isAdmin = adminCheck?.isAdmin === true;
+
+  // Notifications
+  const { data: notificationsList } = useQuery<Notification[]>({
+    queryKey: ['/api/notifications'],
+    enabled: !!user?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const { data: unreadCount } = useQuery<{ count: number }>({
+    queryKey: ['/api/notifications/unread-count'],
+    enabled: !!user?.id,
+    refetchInterval: 30000,
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', '/api/notifications/mark-all-read');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest('PATCH', `/api/notifications/${id}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/unread-count'] });
+    },
+  });
 
   const handleSignOut = () => {
     logout();
@@ -174,14 +218,79 @@ export default function MainLayout({
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="text-muted-foreground hover:text-foreground"
-                data-testid="button-notifications"
-              >
-                <Bell className="h-5 w-5" />
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="text-muted-foreground hover:text-foreground relative"
+                    data-testid="button-notifications"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount && unreadCount.count > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-[#FF6030] text-white text-[10px] font-medium rounded-full h-4 min-w-4 flex items-center justify-center px-1">
+                        {unreadCount.count > 99 ? '99+' : unreadCount.count}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-0">
+                  <div className="flex items-center justify-between px-4 py-3 border-b">
+                    <span className="font-medium">Уведомления</span>
+                    {notificationsList && notificationsList.length > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs text-muted-foreground h-auto py-1 px-2"
+                        onClick={() => markAllReadMutation.mutate()}
+                      >
+                        Прочитать все
+                      </Button>
+                    )}
+                  </div>
+                  <ScrollArea className="h-[300px]">
+                    {notificationsList && notificationsList.length > 0 ? (
+                      <div className="divide-y">
+                        {notificationsList.map((notification) => (
+                          <div 
+                            key={notification.id}
+                            className={cn(
+                              "p-3 cursor-pointer hover:bg-muted/50 transition-colors",
+                              !notification.isRead && "bg-orange-50"
+                            )}
+                            onClick={() => {
+                              if (!notification.isRead) {
+                                markReadMutation.mutate(notification.id);
+                              }
+                            }}
+                          >
+                            <div className="flex items-start gap-2">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full mt-1.5 flex-shrink-0",
+                                !notification.isRead ? "bg-[#FF6030]" : "bg-transparent"
+                              )} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">{notification.title}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{notification.message}</p>
+                                {notification.createdAt && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: ru })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                        <Bell className="h-8 w-8 mb-2 opacity-50" />
+                        <p className="text-sm">Нет уведомлений</p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

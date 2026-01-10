@@ -158,12 +158,14 @@ export const battles = pgTable("battles", {
   theme: text("theme").notNull(), // Тема батла
   category: text("category").notNull(),
   coverImage: text("cover_image"),
-  status: text("status").default("upcoming"), // upcoming, active, voting, finished
+  status: text("status").default("upcoming"), // moderation, rejected, upcoming, active, voting, finished
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   votingEndDate: timestamp("voting_end_date"),
   prizeDescription: text("prize_description"),
   participantsCount: integer("participants_count").default(0),
+  createdBy: integer("created_by").references(() => profiles.id),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
