@@ -141,11 +141,13 @@ export default function Battles() {
     }
   };
 
-  const handleJoinBattle = (battleId: number) => {
+  const handleJoinBattle = (battleSlug: string) => {
     if (!user) {
       navigate("/auth");
       return;
     }
+    // Navigate to battle page - the file picker is there
+    navigate(`/battles/${battleSlug}?join=true`);
   };
 
   const isEmpty = filteredBattles.length === 0;
@@ -258,11 +260,11 @@ export default function Battles() {
                       ) : (
                         <div className="w-full h-full bg-[#F4F4F5] flex items-center justify-center">
                           <Button 
-                            className="bg-[#FF6030] hover:bg-[#E55528] text-[#1D1D1F] font-medium rounded-full px-6"
+                            className="bg-[#FF6030] hover:bg-[#E55528] text-white font-medium rounded-full px-6"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleJoinBattle(battle.id);
+                              handleJoinBattle(battle.slug);
                             }}
                             data-testid={`button-join-${battle.id}`}
                           >

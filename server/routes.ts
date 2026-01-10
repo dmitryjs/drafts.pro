@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, authStorage } from "./replit_integrations/auth";
-import { analyzeResume, generateTestRecommendations, evaluateFreeTextAnswers } from "./polzaAI";
+import { analyzeResume, generateTestRecommendations, evaluateFreeTextAnswers, evaluateTaskSolution } from "./polzaAI";
 
 async function seedDatabase() {
   const existingTasks = await storage.getTasks();
@@ -369,6 +369,38 @@ export async function registerRoutes(
     } catch (err) {
       console.error('Error fetching favorites:', err);
       res.status(500).json({ message: "Ошибка при получении избранного" });
+    }
+  });
+
+  // ============================================
+  // TASK SOLUTIONS
+  // ============================================
+
+  app.post('/api/tasks/:taskId/solutions', isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      const { description, taskDescription } = req.body;
+      
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile) {
+        return res.status(401).json({ message: "Профиль не найден" });
+      }
+
+      // Evaluate the solution using AI
+      const evaluation = await evaluateTaskSolution(taskDescription || "", description);
+
+      // Store the solution with evaluation result
+      // For now, we just return the evaluation result
+      res.json({
+        success: true,
+        evaluation: {
+          isCorrect: evaluation.isCorrect,
+          feedback: evaluation.feedback,
+        },
+      });
+    } catch (err) {
+      console.error('Error submitting solution:', err);
+      res.status(500).json({ message: "Ошибка при отправке решения" });
     }
   });
 

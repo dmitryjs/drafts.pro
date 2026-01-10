@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { 
@@ -9,7 +9,8 @@ import {
   Upload,
   Check,
   Clock,
-  Info
+  Info,
+  Send
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 type BattlePhase = "waiting" | "moderation" | "voting" | "completed";
@@ -30,6 +32,7 @@ interface Comment {
   createdAt: string;
   likes: number;
   dislikes: number;
+  userVote?: "like" | "dislike" | null;
 }
 
 const mockBattlesByPhase: Record<BattlePhase, any> = {
@@ -37,6 +40,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
     id: 1,
     title: "Космический кот #4532",
     description: "Соревнование между двумя дизайнерами. Создайте свою работу и покажите мастерство.",
+    category: "UX/UI",
     phase: "waiting" as BattlePhase,
     creator: {
       name: "Space cat #4532",
@@ -54,6 +58,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
     id: 2,
     title: "Пейзаж горы vs Технологии",
     description: "Природа против технологий. Два художника соревнуются за звание лучшего в этом батле.",
+    category: "Графический",
     phase: "moderation" as BattlePhase,
     creator: {
       name: "Mountain Landscape",
@@ -78,6 +83,7 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
     id: 3,
     title: "Название батла крупным текстом",
     description: "Game kinda complicated at first but then you learn everything gets easier. It's not a game that needs to be played all day, so I think it's worth playing even more for the low investment. The only problem currently is the network rates, which are high, but I believe there will be a solution soon.",
+    category: "Продукт",
     phase: "voting" as BattlePhase,
     creator: {
       name: "Space cat #4532",
@@ -95,13 +101,14 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
       owner: "Dmitry Galkin",
       votes: 900999,
     },
-    timeRemaining: "6 дней 17 часов 32 минуты",
+    timeRemaining: "23 часа 45 минут",
     xpReward: 50,
   },
   completed: {
     id: 4,
     title: "Абстракция #789 - Финал",
     description: "Финальный батл недели завершён. Поздравляем победителя!",
+    category: "3D",
     phase: "completed" as BattlePhase,
     creator: {
       name: "Abstract Dreams",
@@ -124,25 +131,6 @@ const mockBattlesByPhase: Record<BattlePhase, any> = {
   }
 };
 
-const mockComments: Comment[] = [
-  {
-    id: 1,
-    author: "user123",
-    content: "Мне очень нравится эта работа. Думаю, она заслуживает победы за потрясающую графику и анимацию.",
-    createdAt: "3 часа назад",
-    likes: 10,
-    dislikes: 3,
-  },
-  {
-    id: 2,
-    author: "designer456",
-    content: "Game kinda complicated at first but then you learn everything gets easier. It's not a game that needs to be played all day, so I think it's worth playing even more for the low!",
-    createdAt: "4 часа назад",
-    likes: 10,
-    dislikes: 3,
-  },
-];
-
 const phaseLabels = {
   waiting: "Ожидание оппонента",
   moderation: "Модерация",
@@ -161,11 +149,34 @@ export default function BattleDetail() {
   const [, params] = useRoute("/battles/:slug");
   const slug = params?.slug || "";
   const { user } = useAuth();
-  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const [location, navigate] = useLocation();
   const [selectedVote, setSelectedVote] = useState<"creator" | "opponent" | null>(null);
   const [commentText, setCommentText] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [comments, setComments] = useState<Comment[]>([
+    {
+      id: 1,
+      author: "user123",
+      content: "Мне очень нравится эта работа. Думаю, она заслуживает победы за потрясающую графику и анимацию.",
+      createdAt: "3 часа назад",
+      likes: 10,
+      dislikes: 3,
+      userVote: null,
+    },
+    {
+      id: 2,
+      author: "designer456",
+      content: "Game kinda complicated at first but then you learn everything gets easier. It's not a game that needs to be played all day, so I think it's worth playing even more for the low!",
+      createdAt: "4 часа назад",
+      likes: 10,
+      dislikes: 3,
+      userVote: null,
+    },
+  ]);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const phase = slugToPhase[slug] || "voting";
   const battle = mockBattlesByPhase[phase];
@@ -173,18 +184,36 @@ export default function BattleDetail() {
   const canVote = phase === "voting" && user;
   const isCompleted = phase === "completed";
 
+  // Check if we should auto-open file picker
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("join") === "true" && phase === "waiting" && fileInputRef.current) {
+      // Remove join param from URL to avoid repeated triggers
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+      setTimeout(() => {
+        fileInputRef.current?.click();
+      }, 500);
+    }
+  }, [phase]);
+
   const handleVote = () => {
     if (!user) {
       navigate("/auth");
       return;
     }
     if (!selectedVote) return;
+    toast({ title: "Голос засчитан!", description: "Вы получили 5 XP" });
   };
 
   const handleJoinBattle = () => {
     if (!user) {
       navigate("/auth");
       return;
+    }
+    if (selectedImage) {
+      toast({ title: "Вы присоединились к батлу!", description: "Батл отправлен на модерацию" });
     }
   };
 
@@ -195,6 +224,68 @@ export default function BattleDetail() {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
     }
+  };
+
+  const handleSubmitComment = () => {
+    if (!commentText.trim()) return;
+    if (!user) {
+      toast({ title: "Войдите, чтобы комментировать" });
+      return;
+    }
+    
+    setIsSubmittingComment(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      const newComment: Comment = {
+        id: comments.length + 1,
+        author: user.firstName || "Пользователь",
+        content: commentText,
+        createdAt: "только что",
+        likes: 0,
+        dislikes: 0,
+        userVote: null,
+      };
+      setComments([newComment, ...comments]);
+      setCommentText("");
+      setIsSubmittingComment(false);
+      toast({ title: "Комментарий добавлен" });
+    }, 500);
+  };
+
+  const handleCommentVote = (commentId: number, voteType: "like" | "dislike") => {
+    if (!user) {
+      toast({ title: "Войдите, чтобы голосовать" });
+      return;
+    }
+
+    setComments(comments.map(comment => {
+      if (comment.id !== commentId) return comment;
+      
+      const previousVote = comment.userVote;
+      let newLikes = comment.likes;
+      let newDislikes = comment.dislikes;
+      let newVote: "like" | "dislike" | null = voteType;
+
+      // Remove previous vote
+      if (previousVote === "like") newLikes--;
+      if (previousVote === "dislike") newDislikes--;
+
+      // Add new vote or toggle off
+      if (previousVote === voteType) {
+        newVote = null;
+      } else {
+        if (voteType === "like") newLikes++;
+        if (voteType === "dislike") newDislikes++;
+      }
+
+      return {
+        ...comment,
+        likes: newLikes,
+        dislikes: newDislikes,
+        userVote: newVote,
+      };
+    }));
   };
 
   const phases: BattlePhase[] = ["waiting", "moderation", "voting", "completed"];
@@ -250,34 +341,19 @@ export default function BattleDetail() {
         <div className="grid grid-cols-2 gap-6 mb-8">
           {/* Creator Side */}
           <div data-testid="creator-section">
-            <p className="text-xs text-muted-foreground mb-2">Создатель</p>
-            <h2 className="text-xl font-bold text-[#1D1D1F] mb-3 flex items-center gap-2" data-testid="text-creator-name">
-              {battle.creator.name}
-              {creatorWon && (
-                <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
-              )}
-            </h2>
-            
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-[#E8E8EE]" />
-                <div className="text-xs">
-                  <p className="text-muted-foreground">Коллекция</p>
-                  <p className="font-medium text-[#1D1D1F]">{battle.creator.collection}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs">{battle.creator.owner.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="text-xs">
-                  <p className="text-muted-foreground">Владелец</p>
-                  <p className="font-medium text-[#1D1D1F]">{battle.creator.owner}</p>
-                </div>
+            {/* Author with avatar ABOVE image */}
+            <div className="flex items-center gap-2 mb-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-xs">{battle.creator.owner.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-xs text-muted-foreground">Создатель</p>
+                <p className="font-medium text-sm text-[#1D1D1F]">{battle.creator.owner}</p>
               </div>
             </div>
             
-            <div className="aspect-square rounded-xl overflow-hidden bg-[#2D2D2D]">
+            {/* Image */}
+            <div className="aspect-square rounded-xl overflow-hidden bg-[#2D2D2D] mb-3">
               <img 
                 src={battle.creator.image} 
                 alt={battle.creator.name}
@@ -285,41 +361,33 @@ export default function BattleDetail() {
                 data-testid="img-creator-work"
               />
             </div>
+
+            {/* Title and category BELOW image */}
+            <h2 className="text-lg font-bold text-[#1D1D1F] mb-1 flex items-center gap-2" data-testid="text-creator-name">
+              {battle.creator.name}
+              {creatorWon && (
+                <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
+              )}
+            </h2>
           </div>
           
           {/* Opponent Side */}
           <div data-testid="opponent-section">
-            <p className="text-xs text-muted-foreground mb-2">Оппонент</p>
-            
             {hasOpponent ? (
               <>
-                <h2 className="text-xl font-bold text-[#1D1D1F] mb-3 flex items-center gap-2" data-testid="text-opponent-name">
-                  {battle.opponent.name}
-                  {opponentWon && (
-                    <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
-                  )}
-                </h2>
-                
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-emerald-100" />
-                    <div className="text-xs">
-                      <p className="text-muted-foreground">Коллекция</p>
-                      <p className="font-medium text-[#1D1D1F]">{battle.opponent.collection}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs bg-pink-200">{battle.opponent.owner?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-xs">
-                      <p className="text-muted-foreground">Владелец</p>
-                      <p className="font-medium text-[#1D1D1F]">{battle.opponent.owner}</p>
-                    </div>
+                {/* Author with avatar ABOVE image */}
+                <div className="flex items-center gap-2 mb-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs bg-pink-200">{battle.opponent.owner?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Оппонент</p>
+                    <p className="font-medium text-sm text-[#1D1D1F]">{battle.opponent.owner}</p>
                   </div>
                 </div>
                 
-                <div className="aspect-square rounded-xl overflow-hidden bg-[#2D2D2D]">
+                {/* Image */}
+                <div className="aspect-square rounded-xl overflow-hidden bg-[#2D2D2D] mb-3">
                   <img 
                     src={battle.opponent.image} 
                     alt={battle.opponent.name}
@@ -327,29 +395,25 @@ export default function BattleDetail() {
                     data-testid="img-opponent-work"
                   />
                 </div>
+
+                {/* Title BELOW image */}
+                <h2 className="text-lg font-bold text-[#1D1D1F] mb-1 flex items-center gap-2" data-testid="text-opponent-name">
+                  {battle.opponent.name}
+                  {opponentWon && (
+                    <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
+                  )}
+                </h2>
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold text-muted-foreground mb-3" data-testid="text-waiting-opponent">
-                  Ожидаем оппонента
-                </h2>
-                
-                <div className="flex items-center gap-4 mb-4 opacity-50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-[#E8E8EE]" />
-                    <div className="text-xs">
-                      <p className="text-muted-foreground">Коллекция</p>
-                      <p className="text-muted-foreground">—</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs bg-muted">?</AvatarFallback>
-                    </Avatar>
-                    <div className="text-xs">
-                      <p className="text-muted-foreground">Владелец</p>
-                      <p className="text-muted-foreground">—</p>
-                    </div>
+                {/* Empty opponent slot */}
+                <div className="flex items-center gap-2 mb-3 opacity-50">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs bg-muted">?</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Оппонент</p>
+                    <p className="font-medium text-sm text-muted-foreground">Ожидаем...</p>
                   </div>
                 </div>
                 
@@ -358,7 +422,7 @@ export default function BattleDetail() {
                     <div className="relative w-full h-full">
                       <img src={previewUrl} alt="Preview" className="w-full h-full object-cover rounded-lg" data-testid="img-join-preview" />
                       <Button 
-                        className="absolute bottom-4 left-4 right-4 bg-[#FF6030] hover:bg-[#E55528] text-[#1D1D1F] font-medium rounded-xl"
+                        className="absolute bottom-4 left-4 right-4 bg-[#FF6030] hover:bg-[#E55528] text-white font-medium rounded-xl"
                         onClick={handleJoinBattle}
                         data-testid="button-confirm-join"
                       >
@@ -369,6 +433,7 @@ export default function BattleDetail() {
                     <>
                       <label className="flex flex-col items-center cursor-pointer">
                         <input
+                          ref={fileInputRef}
                           type="file"
                           accept="image/*"
                           className="hidden"
@@ -396,20 +461,24 @@ export default function BattleDetail() {
                     </>
                   )}
                 </Card>
+
+                <h2 className="text-lg font-bold text-muted-foreground mt-3" data-testid="text-waiting-opponent">
+                  Ожидаем оппонента
+                </h2>
               </>
             )}
           </div>
         </div>
 
-        {/* Battle Title and Description */}
+        {/* Battle Title, Category and Description */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#1D1D1F] mb-4" data-testid="text-battle-title">{battle.title}</h1>
+          <h1 className="text-2xl font-bold text-[#1D1D1F] mb-2" data-testid="text-battle-title">{battle.title}</h1>
+          <Badge className="bg-[#E8E8EE] text-[#1D1D1F] mb-3" data-testid="badge-category">
+            {battle.category}
+          </Badge>
           <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-battle-description">
             {battle.description}
           </p>
-          <button className="text-sm text-blue-600 hover:underline mt-2" data-testid="button-show-more">
-            Показать ещё
-          </button>
         </div>
 
         {/* Moderation Notice */}
@@ -420,8 +489,7 @@ export default function BattleDetail() {
               <span className="font-semibold text-amber-800">На модерации</span>
             </div>
             <p className="text-sm text-amber-700">
-              Ваш батл проходит проверку модераторами. Обычно это занимает от 1 до 24 часов. 
-              После одобрения начнётся голосование.
+              Ваш батл проходит проверку модераторами. После одобрения начнётся голосование длительностью 24 часа.
             </p>
           </Card>
         )}
@@ -430,11 +498,11 @@ export default function BattleDetail() {
         {phase === "voting" && (
           <Card className="p-6 mb-8 bg-white border-0 shadow-sm" data-testid="card-voting-section">
             <div className="flex items-center gap-2 mb-4">
-              <Check className="h-5 w-5 text-muted-foreground" />
+              <Clock className="h-5 w-5 text-muted-foreground" />
               <span className="font-semibold text-[#1D1D1F]">Голосование</span>
             </div>
             
-            <p className="text-sm text-muted-foreground mb-2">Оставшееся время:</p>
+            <p className="text-sm text-muted-foreground mb-2">Оставшееся время (24 часа):</p>
             <p className="text-2xl font-bold text-[#1D1D1F] mb-6" data-testid="text-time-remaining">{battle.timeRemaining}</p>
             
             {/* Vote Options */}
@@ -544,39 +612,51 @@ export default function BattleDetail() {
           <div className="flex items-center gap-2 mb-4">
             <MessageCircle className="h-5 w-5 text-muted-foreground" />
             <span className="font-semibold text-[#1D1D1F]">Комментарии</span>
+            <span className="text-sm text-muted-foreground">({comments.length})</span>
           </div>
           
           {/* Comment Input */}
-          <Textarea
-            placeholder="Что вы думаете об этом батле?"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            className="mb-4 rounded-xl resize-none"
-            disabled={phase === "waiting" || phase === "moderation"}
-            data-testid="input-comment"
-          />
-          
-          {(phase === "waiting" || phase === "moderation") && (
-            <p className="text-sm text-muted-foreground flex items-center gap-2 mb-4" data-testid="text-comments-disabled">
-              <Info className="h-4 w-4" />
-              Комментарии будут доступны после прохождения модерации
-            </p>
-          )}
-          
-          {(phase === "voting" || phase === "completed") && (
-            <Button 
-              className="mb-4 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl"
-              disabled={!commentText.trim()}
-              data-testid="button-submit-comment"
-            >
-              Отправить
-            </Button>
-          )}
+          <div className="flex gap-3 mb-4">
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              <AvatarFallback className="text-xs">
+                {user?.firstName?.charAt(0) || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <Textarea
+                placeholder="Что вы думаете об этом батле?"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="mb-2 rounded-xl resize-none min-h-[80px]"
+                disabled={phase === "waiting" || phase === "moderation"}
+                data-testid="input-comment"
+              />
+              
+              {(phase === "waiting" || phase === "moderation") && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2" data-testid="text-comments-disabled">
+                  <Info className="h-4 w-4" />
+                  Комментарии будут доступны после прохождения модерации
+                </p>
+              )}
+              
+              {(phase === "voting" || phase === "completed") && (
+                <Button 
+                  className="bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl gap-2"
+                  onClick={handleSubmitComment}
+                  disabled={!commentText.trim() || isSubmittingComment}
+                  data-testid="button-submit-comment"
+                >
+                  <Send className="h-4 w-4" />
+                  Отправить
+                </Button>
+              )}
+            </div>
+          </div>
           
           {/* Comments List */}
           {(phase === "voting" || phase === "completed") && (
             <div className="space-y-4" data-testid="comments-list">
-              {mockComments.map((comment) => (
+              {comments.map((comment) => (
                 <div key={comment.id} className="border-t pt-4" data-testid={`comment-${comment.id}`}>
                   <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
@@ -587,20 +667,32 @@ export default function BattleDetail() {
                         <span className="font-medium text-sm text-[#1D1D1F]">{comment.author}</span>
                         <span className="text-xs text-muted-foreground">{comment.createdAt}</span>
                       </div>
-                      <p className="text-sm text-[#1D1D1F]">{comment.content}</p>
-                      <div className="flex items-center gap-4 mt-2">
+                      <p className="text-sm text-[#1D1D1F] mb-2">{comment.content}</p>
+                      <div className="flex items-center gap-4">
                         <button 
-                          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[#1D1D1F]"
-                          data-testid={`button-like-${comment.id}`}
+                          className={cn(
+                            "flex items-center gap-1 text-sm transition-colors",
+                            comment.userVote === "like" 
+                              ? "text-[#FF6030]" 
+                              : "text-muted-foreground hover:text-[#1D1D1F]"
+                          )}
+                          onClick={() => handleCommentVote(comment.id, "like")}
+                          data-testid={`button-like-comment-${comment.id}`}
                         >
-                          <ThumbsUp className="h-4 w-4" />
+                          <ThumbsUp className={cn("h-4 w-4", comment.userVote === "like" && "fill-current")} />
                           {comment.likes}
                         </button>
                         <button 
-                          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[#1D1D1F]"
-                          data-testid={`button-dislike-${comment.id}`}
+                          className={cn(
+                            "flex items-center gap-1 text-sm transition-colors",
+                            comment.userVote === "dislike" 
+                              ? "text-red-500" 
+                              : "text-muted-foreground hover:text-[#1D1D1F]"
+                          )}
+                          onClick={() => handleCommentVote(comment.id, "dislike")}
+                          data-testid={`button-dislike-comment-${comment.id}`}
                         >
-                          <ThumbsDown className="h-4 w-4" />
+                          <ThumbsDown className={cn("h-4 w-4", comment.userVote === "dislike" && "fill-current")} />
                           {comment.dislikes}
                         </button>
                       </div>

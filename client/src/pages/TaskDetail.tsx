@@ -442,6 +442,7 @@ export default function TaskDetail() {
           onOpenChange={setIsSubmitModalOpen}
           taskId={task.id}
           taskTitle={task.title}
+          taskDescription={task.description || ""}
         />
       )}
     </MainLayout>
