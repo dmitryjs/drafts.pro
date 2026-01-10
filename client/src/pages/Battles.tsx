@@ -168,7 +168,7 @@ export default function Battles() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 mb-6 border-b border-border pb-3 overflow-x-auto">
+      <div className="flex items-center gap-2 mb-6 border-b border-border pb-3 overflow-x-auto overflow-y-hidden">
         {tabs.map((tab) => (
           <button
             key={tab.id}
