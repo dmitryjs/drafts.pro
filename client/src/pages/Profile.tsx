@@ -312,6 +312,20 @@ export default function Profile() {
         className="max-w-2xl space-y-6"
       >
         <Card className="relative">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-4 h-8 w-8 z-10"
+                onClick={() => setIsEditModalOpen(true)}
+                data-testid="button-edit-profile"
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Редактировать профиль</TooltipContent>
+          </Tooltip>
           <CardContent className="p-6">
             <div className="flex items-start gap-5">
               <div className="relative">
@@ -362,21 +376,6 @@ export default function Profile() {
                 </DropdownMenu>
               </div>
             </div>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-4 right-4 h-8 w-8"
-                  onClick={() => setIsEditModalOpen(true)}
-                  data-testid="button-edit-profile"
-                >
-                  <Pencil className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Редактировать профиль</TooltipContent>
-            </Tooltip>
 
             <div className="mt-4">
               <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
