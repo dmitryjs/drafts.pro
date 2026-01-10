@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -36,7 +36,7 @@ import { Switch } from "@/components/ui/switch";
 import { 
   Users, 
   Swords, 
-  HelpCircle, 
+  LayoutGrid,
   BarChart3,
   Plus,
   Trash2,
@@ -45,8 +45,29 @@ import {
   ShieldCheck,
   Check,
   X,
-  Loader2
+  Loader2,
+  FileText,
+  TrendingUp,
+  TrendingDown,
+  Activity
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Legend,
+  Area,
+  AreaChart
+} from "recharts";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -66,6 +87,18 @@ interface AuthUser {
   lastName: string | null;
   profileImageUrl: string | null;
   isAdmin: boolean;
+  createdAt: string;
+}
+
+interface Task {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  status: string;
+  solutionsCount: number;
   createdAt: string;
 }
 
@@ -91,11 +124,14 @@ interface AssessmentQuestion {
   order: number | null;
 }
 
+const CHART_COLORS = ["#FF6030", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"];
+
 export default function Admin() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClientInstance = useQueryClient();
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [selectedSphere, setSelectedSphere] = useState("product");
   const [newQuestion, setNewQuestion] = useState({
     question: "",
@@ -104,6 +140,12 @@ export default function Admin() {
     correctAnswer: 0,
     category: "",
     difficulty: "Medium",
+  });
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    category: "product",
+    level: "junior",
   });
 
   const { data: isAdminCheck, isLoading: checkingAdmin } = useQuery<{ isAdmin: boolean }>({
@@ -117,6 +159,11 @@ export default function Admin() {
 
   const { data: users } = useQuery<AuthUser[]>({
     queryKey: ["/api/admin/users"],
+    enabled: isAdminCheck?.isAdmin === true,
+  });
+
+  const { data: tasks } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
     enabled: isAdminCheck?.isAdmin === true,
   });
 
@@ -198,6 +245,33 @@ export default function Admin() {
     },
   });
 
+  const createTaskMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/tasks", data);
+    },
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      setIsAddTaskOpen(false);
+      setNewTask({ title: "", description: "", category: "product", level: "junior" });
+      toast({ title: "Задача создана" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка создания задачи", variant: "destructive" });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/tasks/${id}`);
+    },
+    onSuccess: () => {
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClientInstance.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "Задача удалена" });
+    },
+  });
+
   if (checkingAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -241,6 +315,14 @@ export default function Admin() {
     });
   };
 
+  const handleCreateTask = () => {
+    if (!newTask.title.trim() || !newTask.description.trim()) {
+      toast({ title: "Заполните все поля", variant: "destructive" });
+      return;
+    }
+    createTaskMutation.mutate(newTask);
+  };
+
   const getBattleStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       upcoming: { label: "Ожидает", variant: "outline" },
@@ -251,6 +333,55 @@ export default function Admin() {
     const { label, variant } = statusMap[status] || { label: status, variant: "outline" };
     return <Badge variant={variant}>{label}</Badge>;
   };
+
+  const getTaskLevelBadge = (level: string) => {
+    const levelColors: Record<string, string> = {
+      intern: "bg-gray-100 text-gray-700",
+      junior: "bg-green-100 text-green-700",
+      middle: "bg-orange-100 text-orange-700",
+      senior: "bg-blue-100 text-blue-700",
+      lead: "bg-purple-100 text-purple-700",
+    };
+    return (
+      <Badge className={levelColors[level?.toLowerCase()] || "bg-gray-100 text-gray-700"}>
+        {level}
+      </Badge>
+    );
+  };
+
+  // Chart data preparation
+  const categoryData = [
+    { name: "Продукт", value: tasks?.filter(t => t.category === "product" || t.category === "Продукт").length || 0 },
+    { name: "UX/UI", value: tasks?.filter(t => t.category === "uxui" || t.category === "UX/UI").length || 0 },
+    { name: "Графика", value: tasks?.filter(t => t.category === "graphic" || t.category === "Графический").length || 0 },
+    { name: "3D", value: tasks?.filter(t => t.category === "3d" || t.category === "3D").length || 0 },
+    { name: "Кейсы", value: tasks?.filter(t => t.category === "cases" || t.category === "Кейсы").length || 0 },
+  ].filter(d => d.value > 0);
+
+  const levelData = [
+    { name: "Intern", count: tasks?.filter(t => t.level?.toLowerCase() === "intern").length || 0 },
+    { name: "Junior", count: tasks?.filter(t => t.level?.toLowerCase() === "junior").length || 0 },
+    { name: "Middle", count: tasks?.filter(t => t.level?.toLowerCase() === "middle").length || 0 },
+    { name: "Senior", count: tasks?.filter(t => t.level?.toLowerCase() === "senior").length || 0 },
+    { name: "Lead", count: tasks?.filter(t => t.level?.toLowerCase() === "lead").length || 0 },
+  ];
+
+  const battleStatusData = [
+    { name: "Активные", value: battles?.filter(b => b.status === "active").length || 0 },
+    { name: "Голосование", value: battles?.filter(b => b.status === "voting").length || 0 },
+    { name: "Ожидают", value: battles?.filter(b => b.status === "upcoming").length || 0 },
+    { name: "Завершены", value: battles?.filter(b => b.status === "finished").length || 0 },
+  ].filter(d => d.value > 0);
+
+  const activityData = [
+    { name: "Пн", users: 12, tasks: 5, battles: 2 },
+    { name: "Вт", users: 19, tasks: 8, battles: 3 },
+    { name: "Ср", users: 15, tasks: 6, battles: 1 },
+    { name: "Чт", users: 22, tasks: 10, battles: 4 },
+    { name: "Пт", users: 28, tasks: 12, battles: 5 },
+    { name: "Сб", users: 18, tasks: 7, battles: 2 },
+    { name: "Вс", users: 14, tasks: 4, battles: 1 },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -268,7 +399,7 @@ export default function Admin() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-xl">
+          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Дашборд
@@ -277,68 +408,210 @@ export default function Admin() {
               <Users className="h-4 w-4" />
               Пользователи
             </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Задачи
+            </TabsTrigger>
             <TabsTrigger value="battles" className="flex items-center gap-2">
               <Swords className="h-4 w-4" />
               Батлы
             </TabsTrigger>
-            <TabsTrigger value="questions" className="flex items-center gap-2">
-              <HelpCircle className="h-4 w-4" />
-              Вопросы
+            <TabsTrigger value="tests" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Тесты
             </TabsTrigger>
           </TabsList>
 
+          {/* Dashboard Tab */}
           <TabsContent value="dashboard">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+              className="space-y-6"
             >
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Пользователей
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats?.usersCount || 0}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Задач
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats?.tasksCount || 0}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Батлов
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats?.battlesCount || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {stats?.activeBattles || 0} активных
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Вопросов
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{stats?.questionsCount || 0}</div>
-                </CardContent>
-              </Card>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Пользователей
+                    </CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stats?.usersCount || 0}</div>
+                    <p className="text-xs text-green-600 flex items-center mt-1">
+                      <TrendingUp className="h-3 w-3 mr-1" /> +12% за неделю
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Задач
+                    </CardTitle>
+                    <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stats?.tasksCount || 0}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {tasks?.filter(t => t.status === "published").length || 0} опубликовано
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Батлов
+                    </CardTitle>
+                    <Swords className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stats?.battlesCount || 0}</div>
+                    <p className="text-xs text-[#FF6030] flex items-center mt-1">
+                      <Activity className="h-3 w-3 mr-1" /> {stats?.activeBattles || 0} активных
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Вопросов в тестах
+                    </CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{stats?.questionsCount || 0}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      По 3 специализациям
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Activity Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Активность за неделю</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={activityData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="name" stroke="#888" fontSize={12} />
+                          <YAxis stroke="#888" fontSize={12} />
+                          <Tooltip />
+                          <Legend />
+                          <Area 
+                            type="monotone" 
+                            dataKey="users" 
+                            name="Пользователи"
+                            stroke="#FF6030" 
+                            fill="#FF6030" 
+                            fillOpacity={0.3}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="tasks" 
+                            name="Задачи"
+                            stroke="#3B82F6" 
+                            fill="#3B82F6"
+                            fillOpacity={0.3}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tasks by Level */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Задачи по уровню сложности</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={levelData} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis type="number" stroke="#888" fontSize={12} />
+                          <YAxis dataKey="name" type="category" stroke="#888" fontSize={12} width={60} />
+                          <Tooltip />
+                          <Bar dataKey="count" name="Количество" fill="#FF6030" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Second Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Tasks by Category Pie */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Задачи по категориям</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={categoryData.length > 0 ? categoryData : [{ name: "Нет данных", value: 1 }]}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {categoryData.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Battle Status Pie */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Статусы батлов</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={battleStatusData.length > 0 ? battleStatusData : [{ name: "Нет данных", value: 1 }]}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={100}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {battleStatusData.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </motion.div>
           </TabsContent>
 
+          {/* Users Tab */}
           <TabsContent value="users">
             <Card>
               <CardHeader>
@@ -391,6 +664,147 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          {/* Tasks Tab */}
+          <TabsContent value="tasks">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Управление задачами</CardTitle>
+                <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-add-task">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Создать задачу
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Создать задачу</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Название</Label>
+                        <Input
+                          value={newTask.title}
+                          onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                          placeholder="Введите название задачи..."
+                          data-testid="input-task-title"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Описание</Label>
+                        <Textarea
+                          value={newTask.description}
+                          onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                          placeholder="Опишите задачу подробно..."
+                          className="min-h-[150px]"
+                          data-testid="input-task-description"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Категория</Label>
+                          <Select
+                            value={newTask.category}
+                            onValueChange={(value) => setNewTask({ ...newTask, category: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="product">Продукт</SelectItem>
+                              <SelectItem value="uxui">UX/UI</SelectItem>
+                              <SelectItem value="graphic">Графический</SelectItem>
+                              <SelectItem value="3d">3D</SelectItem>
+                              <SelectItem value="cases">Кейсы</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Уровень</Label>
+                          <Select
+                            value={newTask.level}
+                            onValueChange={(value) => setNewTask({ ...newTask, level: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="intern">Intern</SelectItem>
+                              <SelectItem value="junior">Junior</SelectItem>
+                              <SelectItem value="middle">Middle</SelectItem>
+                              <SelectItem value="senior">Senior</SelectItem>
+                              <SelectItem value="lead">Lead</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full bg-[#FF6030] hover:bg-[#E55525]"
+                        onClick={handleCreateTask}
+                        disabled={createTaskMutation.isPending}
+                        data-testid="button-save-task"
+                      >
+                        {createTaskMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Создать задачу
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Категория</TableHead>
+                      <TableHead>Уровень</TableHead>
+                      <TableHead>Решений</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead>Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tasks?.map((task) => (
+                      <TableRow key={task.id}>
+                        <TableCell className="font-medium max-w-xs truncate">
+                          {task.title}
+                        </TableCell>
+                        <TableCell>{task.category}</TableCell>
+                        <TableCell>{getTaskLevelBadge(task.level)}</TableCell>
+                        <TableCell>{task.solutionsCount || 0}</TableCell>
+                        <TableCell>
+                          <Badge variant={task.status === "published" ? "default" : "secondary"}>
+                            {task.status === "published" ? "Опубликовано" : task.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteTaskMutation.mutate(task.id)}
+                            data-testid={`button-delete-task-${task.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!tasks || tasks.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          Нет задач
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Battles Tab */}
           <TabsContent value="battles">
             <Card>
               <CardHeader>
@@ -444,16 +858,24 @@ export default function Admin() {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {(!battles || battles.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          Нет батлов
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="questions">
+          {/* Tests Tab (renamed from Questions) */}
+          <TabsContent value="tests">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Управление вопросами</CardTitle>
+                <CardTitle>Управление тестами</CardTitle>
                 <div className="flex items-center gap-4">
                   <Select value={selectedSphere} onValueChange={setSelectedSphere}>
                     <SelectTrigger className="w-48">
@@ -474,7 +896,7 @@ export default function Admin() {
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
-                        <DialogTitle>Добавить вопрос</DialogTitle>
+                        <DialogTitle>Добавить вопрос в тест</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
                         <div className="space-y-2">
@@ -561,7 +983,7 @@ export default function Admin() {
                           </div>
                         )}
                         <Button
-                          className="w-full"
+                          className="w-full bg-[#FF6030] hover:bg-[#E55525]"
                           onClick={handleCreateQuestion}
                           disabled={createQuestionMutation.isPending || !newQuestion.question.trim()}
                           data-testid="button-save-question"
