@@ -11,7 +11,8 @@ import {
   LogIn,
   Plus,
   Bell,
-  ChevronDown
+  ChevronDown,
+  Shield
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,13 @@ export default function MainLayout({
     queryKey: ['/api/profiles', user?.id],
     enabled: !!user?.id,
   });
+
+  const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ['/api/admin/check'],
+    enabled: !!user?.id,
+  });
+  
+  const isAdmin = adminCheck?.isAdmin === true;
 
   const handleSignOut = () => {
     logout();
@@ -213,6 +221,13 @@ export default function MainLayout({
                       <Settings className="mr-2 h-4 w-4" /> Настройки
                     </DropdownMenuItem>
                   </Link>
+                  {isAdmin && (
+                    <Link href="/admin">
+                      <DropdownMenuItem className="cursor-pointer">
+                        <Shield className="mr-2 h-4 w-4" /> Админ панель
+                      </DropdownMenuItem>
+                    </Link>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-destructive focus:text-destructive"
