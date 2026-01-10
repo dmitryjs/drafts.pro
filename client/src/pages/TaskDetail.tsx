@@ -386,29 +386,6 @@ export default function TaskDetail() {
               </div>
             )}
 
-            {/* Mock attachments for display purposes */}
-            {attachments.length === 0 && (
-              <div className="mt-8">
-                <h3 className="font-semibold text-[#1D1D1F] mb-4">Ресурсы</h3>
-                <div className="flex gap-3 flex-wrap">
-                  {[1, 2, 3, 4].map((_, index) => (
-                    <div 
-                      key={index}
-                      className="w-40 h-28 bg-[#2D2D2D] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#3D3D3D] transition-colors"
-                      data-testid={`attachment-placeholder-${index}`}
-                    >
-                      <FileImage className="h-8 w-8 text-white/50" />
-                    </div>
-                  ))}
-                  <div 
-                    className="w-40 h-28 bg-[#2D2D2D] rounded-lg flex items-center justify-center cursor-pointer hover:bg-[#3D3D3D] transition-colors"
-                    data-testid="attachment-more-placeholder"
-                  >
-                    <span className="text-white text-lg font-medium">+7</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="solution" className="mt-0">

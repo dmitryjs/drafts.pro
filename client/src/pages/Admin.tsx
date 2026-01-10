@@ -133,6 +133,13 @@ export default function Admin() {
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [selectedSphere, setSelectedSphere] = useState("product");
+  
+  // Detail view states
+  const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedBattle, setSelectedBattle] = useState<Battle | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<AssessmentQuestion | null>(null);
+  
   const [newQuestion, setNewQuestion] = useState({
     question: "",
     type: "mcq",
@@ -629,7 +636,12 @@ export default function Admin() {
                   </TableHeader>
                   <TableBody>
                     {users?.map((user) => (
-                      <TableRow key={user.id}>
+                      <TableRow 
+                        key={user.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedUser(user)}
+                        data-testid={`row-user-${user.id}`}
+                      >
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
@@ -647,7 +659,7 @@ export default function Admin() {
                         <TableCell>
                           {user.createdAt ? new Date(user.createdAt).toLocaleDateString("ru-RU") : "—"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Switch
                             checked={user.isAdmin}
                             onCheckedChange={(checked) => 
@@ -767,7 +779,12 @@ export default function Admin() {
                   </TableHeader>
                   <TableBody>
                     {tasks?.map((task) => (
-                      <TableRow key={task.id}>
+                      <TableRow 
+                        key={task.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedTask(task)}
+                        data-testid={`row-task-${task.id}`}
+                      >
                         <TableCell className="font-medium max-w-xs truncate">
                           {task.title}
                         </TableCell>
@@ -779,7 +796,7 @@ export default function Admin() {
                             {task.status === "published" ? "Опубликовано" : task.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -823,12 +840,17 @@ export default function Admin() {
                   </TableHeader>
                   <TableBody>
                     {battles?.map((battle) => (
-                      <TableRow key={battle.id}>
+                      <TableRow 
+                        key={battle.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedBattle(battle)}
+                        data-testid={`row-battle-${battle.id}`}
+                      >
                         <TableCell className="font-medium">{battle.title}</TableCell>
                         <TableCell>{battle.theme}</TableCell>
                         <TableCell>{battle.category}</TableCell>
                         <TableCell>{getBattleStatusBadge(battle.status)}</TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
                             <Select
                               value={battle.status}
@@ -1011,14 +1033,19 @@ export default function Admin() {
                   </TableHeader>
                   <TableBody>
                     {questions?.map((q, idx) => (
-                      <TableRow key={q.id}>
+                      <TableRow 
+                        key={q.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedQuestion(q)}
+                        data-testid={`row-question-${q.id}`}
+                      >
                         <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
                         <TableCell className="max-w-md truncate">{q.question}</TableCell>
                         <TableCell>{q.category || "—"}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{q.difficulty || "—"}</Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1044,6 +1071,238 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* User Detail Dialog */}
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Информация о пользователе</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={selectedUser.profileImageUrl || ""} />
+                  <AvatarFallback className="text-xl">
+                    {(selectedUser.firstName?.[0] || selectedUser.email?.[0] || "U").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold text-lg">
+                    {[selectedUser.firstName, selectedUser.lastName].filter(Boolean).join(" ") || "Без имени"}
+                  </h3>
+                  <p className="text-muted-foreground">{selectedUser.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground text-xs">ID пользователя</Label>
+                  <p className="font-medium">{selectedUser.id}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Дата регистрации</Label>
+                  <p className="font-medium">
+                    {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString("ru-RU") : "—"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Статус</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    {selectedUser.isAdmin ? (
+                      <Badge className="bg-[#FF6030]">Администратор</Badge>
+                    ) : (
+                      <Badge variant="secondary">Пользователь</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Detail Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => !open && setSelectedTask(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Информация о задаче</DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg">{selectedTask.title}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                  {getTaskLevelBadge(selectedTask.level)}
+                  <Badge variant="secondary">{selectedTask.category}</Badge>
+                  <Badge variant={selectedTask.status === "published" ? "default" : "outline"}>
+                    {selectedTask.status === "published" ? "Опубликовано" : selectedTask.status}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground text-xs">ID задачи</Label>
+                  <p className="font-medium">{selectedTask.id}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Slug</Label>
+                  <p className="font-medium font-mono text-sm">{selectedTask.slug}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Количество решений</Label>
+                  <p className="font-medium">{selectedTask.solutionsCount || 0}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Дата создания</Label>
+                  <p className="font-medium">
+                    {selectedTask.createdAt ? new Date(selectedTask.createdAt).toLocaleDateString("ru-RU") : "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 border-t">
+                <Label className="text-muted-foreground text-xs">Описание</Label>
+                <p className="text-sm mt-1 whitespace-pre-wrap">{selectedTask.description}</p>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    navigate(`/tasks/${selectedTask.slug}`);
+                    setSelectedTask(null);
+                  }}
+                  data-testid="button-open-task"
+                >
+                  Открыть на сайте
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Battle Detail Dialog */}
+      <Dialog open={!!selectedBattle} onOpenChange={(open) => !open && setSelectedBattle(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Информация о батле</DialogTitle>
+          </DialogHeader>
+          {selectedBattle && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg">{selectedBattle.title}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                  {getBattleStatusBadge(selectedBattle.status)}
+                  <Badge variant="secondary">{selectedBattle.category}</Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground text-xs">ID батла</Label>
+                  <p className="font-medium">{selectedBattle.id}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Slug</Label>
+                  <p className="font-medium font-mono text-sm">{selectedBattle.slug}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Тема</Label>
+                  <p className="font-medium">{selectedBattle.theme}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Дата начала</Label>
+                  <p className="font-medium">
+                    {selectedBattle.startDate ? new Date(selectedBattle.startDate).toLocaleDateString("ru-RU") : "—"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Дата окончания</Label>
+                  <p className="font-medium">
+                    {selectedBattle.endDate ? new Date(selectedBattle.endDate).toLocaleDateString("ru-RU") : "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 border-t">
+                <Label className="text-muted-foreground text-xs">Описание</Label>
+                <p className="text-sm mt-1 whitespace-pre-wrap">{selectedBattle.description}</p>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    navigate(`/battles/${selectedBattle.slug}`);
+                    setSelectedBattle(null);
+                  }}
+                  data-testid="button-open-battle"
+                >
+                  Открыть на сайте
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Question Detail Dialog */}
+      <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && setSelectedQuestion(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Информация о вопросе</DialogTitle>
+          </DialogHeader>
+          {selectedQuestion && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-muted-foreground text-xs">Текст вопроса</Label>
+                <p className="text-base mt-1">{selectedQuestion.question}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground text-xs">ID</Label>
+                  <p className="font-medium">{selectedQuestion.id}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Специализация</Label>
+                  <p className="font-medium">
+                    {selectedQuestion.specialization === "product" ? "Продакт дизайн" :
+                     selectedQuestion.specialization === "uxui" ? "UX/UI дизайн" :
+                     selectedQuestion.specialization === "graphic" ? "Графический дизайн" : 
+                     selectedQuestion.specialization}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Сложность</Label>
+                  <Badge variant="outline">{selectedQuestion.difficulty || "—"}</Badge>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Категория</Label>
+                  <p className="font-medium">{selectedQuestion.category || "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Порядок</Label>
+                  <p className="font-medium">{selectedQuestion.order ?? "—"}</p>
+                </div>
+              </div>
+              {selectedQuestion.options && Array.isArray(selectedQuestion.options) && selectedQuestion.options.length > 0 && (
+                <div className="pt-4 border-t">
+                  <Label className="text-muted-foreground text-xs mb-2 block">Варианты ответов</Label>
+                  <div className="space-y-2">
+                    {selectedQuestion.options.map((opt: any, idx: number) => (
+                      <div 
+                        key={idx}
+                        className={`p-3 rounded-lg border ${opt.isCorrect ? 'bg-green-50 border-green-200' : 'bg-muted/50'}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {opt.isCorrect && <Check className="h-4 w-4 text-green-600" />}
+                          <span>{opt.text}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

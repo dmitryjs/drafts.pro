@@ -377,11 +377,11 @@ export default function Tasks() {
             >
               <Link href={`/tasks/${task.slug}`}>
                 <Card 
-                  className="p-5 hover:shadow-md transition-shadow cursor-pointer bg-white border-0 shadow-sm"
+                  className="p-5 h-[200px] flex flex-col hover:shadow-md transition-shadow cursor-pointer bg-white border-0 shadow-sm"
                   data-testid={`task-card-${task.id}`}
                 >
                   {/* Author Avatar + Name -> Arrow -> Category Tag */}
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-shrink-0">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-xs bg-muted text-muted-foreground">
                         {(task.author || task.authorName || "A").charAt(0)}
@@ -401,17 +401,17 @@ export default function Tasks() {
                   </div>
                   
                   {/* Title */}
-                  <h3 className="font-semibold text-base leading-snug mb-2 line-clamp-2 text-[#1D1D1F]">
+                  <h3 className="font-semibold text-base leading-snug mb-2 line-clamp-2 text-[#1D1D1F] flex-shrink-0">
                     {task.title}
                   </h3>
                   
                   {/* Description */}
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-grow">
                     {task.description}
                   </p>
                   
                   {/* Interactive Action Buttons - Like/Dislike and Favorite */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0 mt-auto">
                     {/* Like */}
                     <button
                       onClick={(e) => handleVote(e, task.id, 1)}
