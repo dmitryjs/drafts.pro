@@ -5,19 +5,32 @@ import { useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw, Loader2, Pencil } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw, Loader2, Pencil, Building2, MapPin, GraduationCap } from "lucide-react";
 import { SiTelegram, SiBehance, SiDribbble } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import MainLayout from "@/components/layout/MainLayout";
 import UserAvatar from "@/components/UserAvatar";
 import { getLevelInfo, XP_REWARDS } from "@shared/xp";
@@ -26,17 +39,40 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
+const COUNTRIES = [
+  { code: "RU", name: "Россия", flag: "🇷🇺" },
+  { code: "BY", name: "Беларусь", flag: "🇧🇾" },
+  { code: "UA", name: "Украина", flag: "🇺🇦" },
+  { code: "KZ", name: "Казахстан", flag: "🇰🇿" },
+  { code: "UZ", name: "Узбекистан", flag: "🇺🇿" },
+  { code: "GE", name: "Грузия", flag: "🇬🇪" },
+  { code: "AM", name: "Армения", flag: "🇦🇲" },
+  { code: "AZ", name: "Азербайджан", flag: "🇦🇿" },
+  { code: "RS", name: "Сербия", flag: "🇷🇸" },
+  { code: "ME", name: "Черногория", flag: "🇲🇪" },
+  { code: "TR", name: "Турция", flag: "🇹🇷" },
+  { code: "AE", name: "ОАЭ", flag: "🇦🇪" },
+  { code: "TH", name: "Таиланд", flag: "🇹🇭" },
+  { code: "ID", name: "Индонезия", flag: "🇮🇩" },
+  { code: "US", name: "США", flag: "🇺🇸" },
+  { code: "DE", name: "Германия", flag: "🇩🇪" },
+  { code: "NL", name: "Нидерланды", flag: "🇳🇱" },
+  { code: "PT", name: "Португалия", flag: "🇵🇹" },
+  { code: "ES", name: "Испания", flag: "🇪🇸" },
+  { code: "CY", name: "Кипр", flag: "🇨🇾" },
+];
+
+const GRADES = [
+  { value: "intern", label: "Intern" },
+  { value: "junior", label: "Junior" },
+  { value: "middle", label: "Middle" },
+  { value: "senior", label: "Senior" },
+  { value: "lead", label: "Lead" },
+];
+
 const avatarColors = [
-  "#34C759",
-  "#FF6030",
-  "#007AFF",
-  "#AF52DE",
-  "#FF9500",
-  "#5856D6",
-  "#FF2D55",
-  "#00C7BE",
-  "#32ADE6",
-  "#FF3B30",
+  "#34C759", "#FF6030", "#007AFF", "#AF52DE", "#FF9500",
+  "#5856D6", "#FF2D55", "#00C7BE", "#32ADE6", "#FF3B30",
 ];
 
 function getColorFromName(name?: string | null): string {
@@ -45,8 +81,22 @@ function getColorFromName(name?: string | null): string {
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const index = Math.abs(hash) % avatarColors.length;
-  return avatarColors[index];
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
+
+function getCountryFlag(countryCode?: string | null): string {
+  const country = COUNTRIES.find(c => c.code === countryCode);
+  return country?.flag || "";
+}
+
+function getCountryName(countryCode?: string | null): string {
+  const country = COUNTRIES.find(c => c.code === countryCode);
+  return country?.name || "";
+}
+
+function getGradeLabel(gradeValue?: string | null): string {
+  const grade = GRADES.find(g => g.value === gradeValue);
+  return grade?.label || "";
 }
 
 export default function Profile() {
@@ -55,26 +105,19 @@ export default function Profile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
   
-  const [fullName, setFullName] = useState("");
-  const [bio, setBio] = useState("");
-  const [company, setCompany] = useState("");
-  const [location, setLocation] = useState("");
-  const [telegramLink, setTelegramLink] = useState("");
-  const [behanceLink, setBehanceLink] = useState("");
-  const [dribbbleLink, setDribbbleLink] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFullName, setEditFullName] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editCompany, setEditCompany] = useState("");
+  const [editCountry, setEditCountry] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editGrade, setEditGrade] = useState("");
+  const [editTelegram, setEditTelegram] = useState("");
+  const [editBehance, setEditBehance] = useState("");
+  const [editDribbble, setEditDribbble] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [initialValues, setInitialValues] = useState({
-    fullName: "",
-    bio: "",
-    company: "",
-    location: "",
-    telegramLink: "",
-    behanceLink: "",
-    dribbbleLink: "",
-    avatarUrl: null as string | null,
-  });
+  const [activeTab, setActiveTab] = useState("tasks");
 
   const { data: profileData } = useQuery<ProfileType>({
     queryKey: ["/api/profiles", user?.id],
@@ -83,40 +126,21 @@ export default function Profile() {
 
   useEffect(() => {
     if (profileData) {
-      const values = {
-        fullName: profileData.fullName || "",
-        bio: profileData.bio || "",
-        company: profileData.company || "",
-        location: profileData.location || "",
-        telegramLink: profileData.telegramUsername || "",
-        behanceLink: (profileData as any).behanceLink || "",
-        dribbbleLink: (profileData as any).dribbbleLink || "",
-        avatarUrl: profileData.avatarUrl || null,
-      };
-      setFullName(values.fullName);
-      setBio(values.bio);
-      setCompany(values.company);
-      setLocation(values.location);
-      setTelegramLink(values.telegramLink);
-      setBehanceLink(values.behanceLink);
-      setDribbbleLink(values.dribbbleLink);
-      setAvatarUrl(values.avatarUrl);
-      setInitialValues(values);
+      setEditFullName(profileData.fullName || "");
+      setEditBio(profileData.bio || "");
+      setEditCompany(profileData.company || "");
+      setEditCountry((profileData as any).country || "");
+      setEditCity((profileData as any).city || "");
+      setEditGrade((profileData as any).grade || "");
+      setEditTelegram(profileData.telegramUsername || "");
+      setEditBehance((profileData as any).behanceUrl || "");
+      setEditDribbble((profileData as any).dribbbleUrl || "");
+      setAvatarUrl(profileData.avatarUrl || null);
     }
   }, [profileData]);
 
   const mockUserXp = 450;
   const levelInfo = getLevelInfo(mockUserXp);
-
-  const hasChanges = 
-    fullName !== initialValues.fullName ||
-    bio !== initialValues.bio ||
-    company !== initialValues.company ||
-    location !== initialValues.location ||
-    telegramLink !== initialValues.telegramLink ||
-    behanceLink !== initialValues.behanceLink ||
-    dribbbleLink !== initialValues.dribbbleLink ||
-    avatarUrl !== initialValues.avatarUrl;
 
   const saveProfileMutation = useMutation({
     mutationFn: async (data: Partial<ProfileType>) => {
@@ -126,17 +150,7 @@ export default function Profile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
       toast({ title: "Профиль сохранён!" });
-      setInitialValues({
-        fullName,
-        bio,
-        company,
-        location,
-        telegramLink,
-        behanceLink,
-        dribbbleLink,
-        avatarUrl,
-      });
-      setIsEditing(false);
+      setIsEditModalOpen(false);
     },
     onError: () => {
       toast({ title: "Ошибка при сохранении", variant: "destructive" });
@@ -145,25 +159,17 @@ export default function Profile() {
 
   const handleSave = () => {
     saveProfileMutation.mutate({
-      fullName: fullName || undefined,
-      bio: bio || undefined,
-      company: company || undefined,
-      location: location || undefined,
-      telegramUsername: telegramLink || undefined,
+      fullName: editFullName || undefined,
+      bio: editBio || undefined,
+      company: editCompany || undefined,
+      country: editCountry || undefined,
+      city: editCity || undefined,
+      grade: editGrade || undefined,
+      telegramUsername: editTelegram || undefined,
+      behanceUrl: editBehance || undefined,
+      dribbbleUrl: editDribbble || undefined,
       avatarUrl: avatarUrl,
-    });
-  };
-
-  const handleCancel = () => {
-    setFullName(initialValues.fullName);
-    setBio(initialValues.bio);
-    setCompany(initialValues.company);
-    setLocation(initialValues.location);
-    setTelegramLink(initialValues.telegramLink);
-    setBehanceLink(initialValues.behanceLink);
-    setDribbbleLink(initialValues.dribbbleLink);
-    setAvatarUrl(initialValues.avatarUrl);
-    setIsEditing(false);
+    } as any);
   };
 
   const { data: drafts } = useQuery<TaskDraft[]>({
@@ -179,25 +185,17 @@ export default function Profile() {
         toast({ title: "Файл слишком большой. Максимум 3MB", variant: "destructive" });
         return;
       }
-      
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Url = reader.result as string;
-        setAvatarUrl(base64Url);
-      };
-      reader.onerror = () => {
-        toast({ title: "Ошибка при чтении файла", variant: "destructive" });
-      };
+      reader.onloadend = () => setAvatarUrl(reader.result as string);
+      reader.onerror = () => toast({ title: "Ошибка при чтении файла", variant: "destructive" });
       reader.readAsDataURL(file);
     }
   };
 
-  const handleDeleteAvatar = () => {
-    setAvatarUrl(null);
-  };
-
-  const displayName = fullName || user?.firstName || "Пользователь";
-  const displayBio = bio || "Дизайнер";
+  const displayName = editFullName || user?.firstName || "Ваше имя";
+  const displayBio = editBio || "Ваша роль";
+  const hasLocation = editCountry || editCity;
+  const hasInfo = editCompany || editGrade || hasLocation;
   
   const rightPanel = (
     <div className="space-y-6">
@@ -250,9 +248,7 @@ export default function Profile() {
                 <Zap className="h-4 w-4 text-[#FF6030]" />
                 <span className="font-medium">{levelInfo.totalXp} XP</span>
               </div>
-              
               <Progress value={levelInfo.progressPercent} className="h-2 mb-1" />
-              
               {!levelInfo.isMaxLevel && levelInfo.nextLevel && (
                 <p className="text-xs text-muted-foreground">
                   До уровня {levelInfo.nextLevel.level}: {levelInfo.xpToNextLevel - levelInfo.xpInCurrentLevel} XP
@@ -263,26 +259,24 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      <div>
-        <button
-          onClick={() => navigate("/drafts")}
-          className="w-full flex items-center justify-between p-3 rounded-lg bg-[#F0F0F0] hover:bg-[#E5E5E5] transition-colors group"
-          data-testid="button-go-to-drafts"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div className="text-left">
-              <p className="font-medium">Черновики</p>
-              <p className="text-xs text-muted-foreground">
-                {draftsCount > 0 ? `${draftsCount} ${draftsCount === 1 ? 'черновик' : draftsCount < 5 ? 'черновика' : 'черновиков'}` : 'Нет черновиков'}
-              </p>
-            </div>
+      <button
+        onClick={() => navigate("/drafts")}
+        className="w-full flex items-center justify-between p-3 rounded-lg bg-[#F0F0F0] hover:bg-[#E5E5E5] transition-colors group"
+        data-testid="button-go-to-drafts"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+            <FileText className="h-5 w-5 text-muted-foreground" />
           </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-        </button>
-      </div>
+          <div className="text-left">
+            <p className="font-medium">Черновики</p>
+            <p className="text-xs text-muted-foreground">
+              {draftsCount > 0 ? `${draftsCount} ${draftsCount === 1 ? 'черновик' : draftsCount < 5 ? 'черновика' : 'черновиков'}` : 'Нет черновиков'}
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+      </button>
 
       <div className="border-t pt-6">
         <h3 className="font-semibold mb-3">Статистика</h3>
@@ -315,238 +309,307 @@ export default function Profile() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="max-w-2xl space-y-8"
+        className="max-w-2xl space-y-6"
       >
         <Card className="relative">
           <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex items-start gap-6">
-                <div className="relative">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                    data-testid="input-avatar-file"
-                  />
-                  {isEditing ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="cursor-pointer" data-testid="button-avatar-menu">
-                          <Avatar className="w-24 h-24 border-2 border-border/30">
-                            <AvatarImage src={avatarUrl || ""} />
-                            <AvatarFallback 
-                              className="text-2xl text-white font-medium"
-                              style={{ backgroundColor: getColorFromName(displayName) }}
-                            >
-                              {displayName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {avatarUrl ? (
-                          <>
-                            <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Заменить
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleDeleteAvatar} className="text-destructive">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Удалить
-                            </DropdownMenuItem>
-                          </>
-                        ) : (
-                          <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                            <Upload className="h-4 w-4 mr-2" />
-                            Загрузить аватарку
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <UserAvatar 
-                      avatarUrl={avatarUrl}
-                      name={displayName}
-                      size="xl"
-                      className="w-24 h-24"
-                    />
-                  )}
-                  {saveProfileMutation.isPending && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
-                      <Loader2 className="h-6 w-6 animate-spin text-white" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold">{displayName}</h1>
-                  <p className="text-muted-foreground">{displayBio}</p>
-                </div>
-              </div>
-              
-              {!isEditing && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                  className="gap-2"
-                  data-testid="button-edit-profile"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Редактировать
-                </Button>
-              )}
-            </div>
-
-            <Separator className="my-6" />
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Имя</Label>
-                  {isEditing ? (
-                    <Input 
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Введите имя"
-                      data-testid="input-fullname"
-                    />
-                  ) : (
-                    <Input value={fullName || "—"} disabled className="bg-muted/30" />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input value={user?.email || ""} disabled className="bg-muted/30" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>О себе</Label>
-                {isEditing ? (
-                  <Input 
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Product Designer с 5-летним опытом"
-                    data-testid="input-bio"
-                  />
-                ) : (
-                  <Input value={bio || "—"} disabled className="bg-muted/30" />
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Компания</Label>
-                  {isEditing ? (
-                    <Input 
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      placeholder="Яндекс"
-                      data-testid="input-company"
-                    />
-                  ) : (
-                    <Input value={company || "—"} disabled className="bg-muted/30" />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Город</Label>
-                  {isEditing ? (
-                    <Input 
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Москва"
-                      data-testid="input-location"
-                    />
-                  ) : (
-                    <Input value={location || "—"} disabled className="bg-muted/30" />
-                  )}
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Социальные сети</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <SiTelegram className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    {isEditing ? (
-                      <Input 
-                        placeholder="https://t.me/username" 
-                        value={telegramLink}
-                        onChange={(e) => setTelegramLink(e.target.value)}
-                        data-testid="input-telegram-link"
-                      />
-                    ) : (
-                      <Input value={telegramLink || "—"} disabled className="bg-muted/30" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <SiBehance className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    {isEditing ? (
-                      <Input 
-                        placeholder="https://behance.net/username" 
-                        value={behanceLink}
-                        onChange={(e) => setBehanceLink(e.target.value)}
-                        data-testid="input-behance-link"
-                      />
-                    ) : (
-                      <Input value={behanceLink || "—"} disabled className="bg-muted/30" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                      <SiDribbble className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    {isEditing ? (
-                      <Input 
-                        placeholder="https://dribbble.com/username" 
-                        value={dribbbleLink}
-                        onChange={(e) => setDribbbleLink(e.target.value)}
-                        data-testid="input-dribbble-link"
-                      />
-                    ) : (
-                      <Input value={dribbbleLink || "—"} disabled className="bg-muted/30" />
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {isEditing && (
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    variant="outline"
-                    className="flex-1"
-                    onClick={handleCancel}
-                    data-testid="button-cancel-edit"
-                  >
-                    Отмена
-                  </Button>
-                  <Button 
-                    className="flex-1 bg-[#FF6030] hover:bg-[#E5562B] text-white" 
-                    onClick={handleSave}
-                    disabled={!hasChanges || saveProfileMutation.isPending}
-                    data-testid="button-save-profile"
-                  >
-                    {saveProfileMutation.isPending ? (
+            <div className="flex items-start gap-5">
+              <div className="relative">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                  data-testid="input-avatar-file"
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="cursor-pointer relative group" data-testid="button-avatar-menu">
+                      <Avatar className="w-20 h-20 border-2 border-border/30">
+                        <AvatarImage src={avatarUrl || ""} />
+                        <AvatarFallback 
+                          className="text-2xl text-white font-medium"
+                          style={{ backgroundColor: getColorFromName(displayName) }}
+                        >
+                          {displayName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Pencil className="h-5 w-5 text-white" />
+                      </div>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {avatarUrl ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Сохранение...
+                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Заменить
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAvatarUrl(null)} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Удалить
+                        </DropdownMenuItem>
                       </>
                     ) : (
-                      "Сохранить"
+                      <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Загрузить
+                      </DropdownMenuItem>
                     )}
-                  </Button>
-                </div>
-              )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="flex-1 pt-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-4 right-4 h-8 w-8"
+                      onClick={() => setIsEditModalOpen(true)}
+                      data-testid="button-edit-profile"
+                    >
+                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Редактировать профиль</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
+
+            <div className="mt-4">
+              <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
+              <p className="text-muted-foreground">{displayBio}</p>
+            </div>
+
+            {hasInfo && (
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                {hasLocation && (
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4" />
+                    <span>
+                      {editCountry && getCountryFlag(editCountry)} {getCountryName(editCountry)}
+                      {editCity && `, ${editCity}`}
+                    </span>
+                  </div>
+                )}
+                {editGrade && (
+                  <div className="flex items-center gap-1.5">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>{getGradeLabel(editGrade)}</span>
+                  </div>
+                )}
+                {editCompany && (
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4" />
+                    <span>{editCompany}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(editTelegram || editBehance || editDribbble) && (
+              <div className="mt-4 flex gap-2">
+                {editTelegram && (
+                  <a href={editTelegram.startsWith("http") ? editTelegram : `https://t.me/${editTelegram}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                      <SiTelegram className="h-4 w-4" />
+                    </Button>
+                  </a>
+                )}
+                {editBehance && (
+                  <a href={editBehance.startsWith("http") ? editBehance : `https://behance.net/${editBehance}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                      <SiBehance className="h-4 w-4" />
+                    </Button>
+                  </a>
+                )}
+                {editDribbble && (
+                  <a href={editDribbble.startsWith("http") ? editDribbble : `https://dribbble.com/${editDribbble}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="icon" className="rounded-full h-8 w-8">
+                      <SiDribbble className="h-4 w-4" />
+                    </Button>
+                  </a>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full grid grid-cols-2 h-12 p-1 bg-muted/50">
+            <TabsTrigger value="tasks" className="text-sm font-medium" data-testid="tab-tasks">
+              Задачи
+            </TabsTrigger>
+            <TabsTrigger value="battles" className="text-sm font-medium" data-testid="tab-battles">
+              Батлы
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="tasks" className="mt-4">
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>Вы ещё не решили ни одной задачи</p>
+            </div>
+          </TabsContent>
+          <TabsContent value="battles" className="mt-4">
+            <div className="text-center py-12 text-muted-foreground">
+              <Zap className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>Вы ещё не участвовали в батлах</p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </motion.div>
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Редактировать профиль</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Имя</Label>
+              <Input
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+                placeholder="Введите ваше имя"
+                data-testid="input-edit-fullname"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>О себе / роль</Label>
+              <Input
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                placeholder="Например: Product Designer"
+                data-testid="input-edit-bio"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Страна</Label>
+                <Select value={editCountry} onValueChange={setEditCountry}>
+                  <SelectTrigger data-testid="select-country">
+                    <SelectValue placeholder="Выберите страну" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.flag} {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Город</Label>
+                <Input
+                  value={editCity}
+                  onChange={(e) => setEditCity(e.target.value)}
+                  placeholder="Введите город"
+                  data-testid="input-edit-city"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Грейд</Label>
+                <Select value={editGrade} onValueChange={setEditGrade}>
+                  <SelectTrigger data-testid="select-grade">
+                    <SelectValue placeholder="Выберите грейд" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GRADES.map((g) => (
+                      <SelectItem key={g.value} value={g.value}>
+                        {g.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Компания</Label>
+                <Input
+                  value={editCompany}
+                  onChange={(e) => setEditCompany(e.target.value)}
+                  placeholder="Где работаете"
+                  data-testid="input-edit-company"
+                />
+              </div>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <Label className="text-sm font-medium mb-3 block">Социальные сети</Label>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                    <SiTelegram className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <Input 
+                    placeholder="username или ссылка" 
+                    value={editTelegram}
+                    onChange={(e) => setEditTelegram(e.target.value)}
+                    data-testid="input-edit-telegram"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                    <SiBehance className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <Input 
+                    placeholder="username или ссылка" 
+                    value={editBehance}
+                    onChange={(e) => setEditBehance(e.target.value)}
+                    data-testid="input-edit-behance"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                    <SiDribbble className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <Input 
+                    placeholder="username или ссылка" 
+                    value={editDribbble}
+                    onChange={(e) => setEditDribbble(e.target.value)}
+                    data-testid="input-edit-dribbble"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              className="flex-1 bg-[#FF6030] hover:bg-[#E5562B] text-white"
+              onClick={handleSave}
+              disabled={saveProfileMutation.isPending}
+              data-testid="button-save-profile"
+            >
+              {saveProfileMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Сохранение...
+                </>
+              ) : (
+                "Сохранить"
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              data-testid="button-cancel-edit"
+            >
+              Отмена
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

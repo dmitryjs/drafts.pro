@@ -75,9 +75,14 @@ export const profiles = pgTable("profiles", {
   bio: text("bio"),
   profession: text("profession"),
   company: text("company"),
+  country: text("country"),
+  city: text("city"),
+  grade: text("grade"),
   location: text("location"),
   portfolioUrl: text("portfolio_url"),
   telegramUsername: text("telegram_username"),
+  behanceUrl: text("behance_url"),
+  dribbbleUrl: text("dribbble_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
