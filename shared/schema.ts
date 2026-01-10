@@ -96,6 +96,7 @@ export const tasks = pgTable("tasks", {
   sphere: text("sphere"), // Сфера применения
   attachments: jsonb("attachments"), // Вложения (ссылки на файлы)
   authorId: integer("author_id").references(() => users.id),
+  companyId: integer("company_id").references(() => companies.id), // If task is from a company
   status: text("status").default("published"),
   solutionsCount: integer("solutions_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -187,6 +188,27 @@ export const battleVotes = pgTable("battle_votes", {
   battleId: integer("battle_id").references(() => battles.id).notNull(),
   entryId: integer("entry_id").references(() => battleEntries.id).notNull(),
   voterId: integer("voter_id").references(() => users.id).notNull(),
+  xpAwarded: boolean("xp_awarded").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Battle Comments
+export const battleComments = pgTable("battle_comments", {
+  id: serial("id").primaryKey(),
+  battleId: integer("battle_id").references(() => battles.id).notNull(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  content: text("content").notNull(),
+  likes: integer("likes").default(0),
+  dislikes: integer("dislikes").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Battle Comment Votes
+export const battleCommentVotes = pgTable("battle_comment_votes", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").references(() => battleComments.id).notNull(),
+  profileId: integer("profile_id").references(() => profiles.id).notNull(),
+  value: integer("value").notNull(), // 1 for like, -1 for dislike
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -415,7 +437,9 @@ export const insertTaskVoteSchema = createInsertSchema(taskVotes).omit({ id: tru
 export const insertTaskFavoriteSchema = createInsertSchema(taskFavorites).omit({ id: true, createdAt: true });
 export const insertBattleSchema = createInsertSchema(battles).omit({ id: true, createdAt: true, participantsCount: true });
 export const insertBattleEntrySchema = createInsertSchema(battleEntries).omit({ id: true, createdAt: true, votesCount: true, rank: true });
-export const insertBattleVoteSchema = createInsertSchema(battleVotes).omit({ id: true, createdAt: true });
+export const insertBattleVoteSchema = createInsertSchema(battleVotes).omit({ id: true, createdAt: true, xpAwarded: true });
+export const insertBattleCommentSchema = createInsertSchema(battleComments).omit({ id: true, createdAt: true, likes: true, dislikes: true });
+export const insertBattleCommentVoteSchema = createInsertSchema(battleCommentVotes).omit({ id: true, createdAt: true });
 export const insertSkillAssessmentSchema = createInsertSchema(skillAssessments).omit({ id: true, createdAt: true });
 export const insertMentorSchema = createInsertSchema(mentors).omit({ id: true, createdAt: true, rating: true, reviewsCount: true, sessionsCount: true });
 export const insertMentorSlotSchema = createInsertSchema(mentorSlots).omit({ id: true });
@@ -459,6 +483,12 @@ export type InsertBattleEntry = z.infer<typeof insertBattleEntrySchema>;
 
 export type BattleVote = typeof battleVotes.$inferSelect;
 export type InsertBattleVote = z.infer<typeof insertBattleVoteSchema>;
+
+export type BattleComment = typeof battleComments.$inferSelect;
+export type InsertBattleComment = z.infer<typeof insertBattleCommentSchema>;
+
+export type BattleCommentVote = typeof battleCommentVotes.$inferSelect;
+export type InsertBattleCommentVote = z.infer<typeof insertBattleCommentVoteSchema>;
 
 export type SkillAssessment = typeof skillAssessments.$inferSelect;
 export type InsertSkillAssessment = z.infer<typeof insertSkillAssessmentSchema>;

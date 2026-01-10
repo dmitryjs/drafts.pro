@@ -542,6 +542,121 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // BATTLE VOTING (with duplicate prevention and XP)
+  // ============================================
+
+  app.post('/api/battles/:battleId/vote', isAuthenticated, async (req: any, res) => {
+    try {
+      const battleId = parseInt(req.params.battleId);
+      const { entryId } = req.body;
+      
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile || !profile.userId) {
+        return res.status(401).json({ message: "Необходима авторизация" });
+      }
+
+      // Check if user already voted on this battle
+      const existingVote = await storage.getBattleVote(battleId, profile.userId);
+      if (existingVote) {
+        return res.status(400).json({ message: "Вы уже голосовали в этом батле" });
+      }
+
+      // Create vote
+      const vote = await storage.createBattleVote({
+        battleId,
+        entryId,
+        voterId: profile.userId,
+      });
+
+      res.json({ success: true, vote });
+    } catch (err) {
+      console.error('Error voting on battle:', err);
+      res.status(500).json({ message: "Ошибка при голосовании" });
+    }
+  });
+
+  app.get('/api/battles/:battleId/vote', async (req: any, res) => {
+    try {
+      const battleId = parseInt(req.params.battleId);
+      let hasVoted = false;
+      
+      if (req.user?.claims?.sub) {
+        const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+        if (profile?.userId) {
+          const vote = await storage.getBattleVote(battleId, profile.userId);
+          hasVoted = !!vote;
+        }
+      }
+      res.json({ hasVoted });
+    } catch (err) {
+      console.error('Error checking battle vote:', err);
+      res.status(500).json({ message: "Ошибка при проверке голоса" });
+    }
+  });
+
+  // ============================================
+  // BATTLE COMMENTS
+  // ============================================
+
+  app.get('/api/battles/:battleId/comments', async (req, res) => {
+    try {
+      const battleId = parseInt(req.params.battleId);
+      const comments = await storage.getBattleComments(battleId);
+      res.json(comments);
+    } catch (err) {
+      console.error('Error fetching battle comments:', err);
+      res.status(500).json({ message: "Ошибка при получении комментариев" });
+    }
+  });
+
+  app.post('/api/battles/:battleId/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const battleId = parseInt(req.params.battleId);
+      const { content } = req.body;
+      
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ message: "Комментарий не может быть пустым" });
+      }
+      
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile) {
+        return res.status(401).json({ message: "Профиль не найден" });
+      }
+
+      const comment = await storage.createBattleComment({
+        battleId,
+        profileId: profile.id,
+        content: content.trim(),
+      });
+
+      res.status(201).json(comment);
+    } catch (err) {
+      console.error('Error creating battle comment:', err);
+      res.status(500).json({ message: "Ошибка при создании комментария" });
+    }
+  });
+
+  app.post('/api/battle-comments/:commentId/vote', isAuthenticated, async (req: any, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { value } = req.body as { value: 1 | -1 };
+      
+      const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
+      if (!profile) {
+        return res.status(401).json({ message: "Профиль не найден" });
+      }
+
+      await storage.upsertBattleCommentVote(commentId, profile.id, value);
+      await storage.updateBattleCommentCounts(commentId);
+      
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error voting on comment:', err);
+      res.status(500).json({ message: "Ошибка при голосовании" });
+    }
+  });
+
+  // ============================================
   // SKILL ASSESSMENTS (ОЦЕНКА НАВЫКОВ)
   // ============================================
 

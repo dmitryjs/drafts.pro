@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   ArrowLeft, 
   MessageCircle,
@@ -10,7 +11,8 @@ import {
   Check,
   Clock,
   Info,
-  Send
+  Send,
+  Loader2
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+import type { BattleComment } from "@shared/schema";
 
 type BattlePhase = "waiting" | "moderation" | "voting" | "completed";
 
@@ -150,32 +154,13 @@ export default function BattleDetail() {
   const slug = params?.slug || "";
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
   const [selectedVote, setSelectedVote] = useState<"creator" | "opponent" | null>(null);
   const [commentText, setCommentText] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: 1,
-      author: "user123",
-      content: "Мне очень нравится эта работа. Думаю, она заслуживает победы за потрясающую графику и анимацию.",
-      createdAt: "3 часа назад",
-      likes: 10,
-      dislikes: 3,
-      userVote: null,
-    },
-    {
-      id: 2,
-      author: "designer456",
-      content: "Game kinda complicated at first but then you learn everything gets easier. It's not a game that needs to be played all day, so I think it's worth playing even more for the low!",
-      createdAt: "4 часа назад",
-      likes: 10,
-      dislikes: 3,
-      userVote: null,
-    },
-  ]);
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [localCommentVotes, setLocalCommentVotes] = useState<Record<number, "like" | "dislike" | null>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const phase = slugToPhase[slug] || "voting";
@@ -183,6 +168,93 @@ export default function BattleDetail() {
   const hasOpponent = !!battle.opponent?.image;
   const canVote = phase === "voting" && user;
   const isCompleted = phase === "completed";
+
+  // Mock battle ID for now (in real app, would get from battle data)
+  const battleId = battle?.id || 1;
+
+  // Fetch comments from API
+  const { data: apiComments = [] } = useQuery<BattleComment[]>({
+    queryKey: ["/api/battles", battleId, "comments"],
+    queryFn: async () => {
+      const res = await fetch(`/api/battles/${battleId}/comments`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Check if user has already voted
+  const { data: voteStatus } = useQuery<{ hasVoted: boolean }>({
+    queryKey: ["/api/battles", battleId, "vote"],
+    queryFn: async () => {
+      const res = await fetch(`/api/battles/${battleId}/vote`);
+      if (!res.ok) return { hasVoted: false };
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  const hasAlreadyVoted = voteStatus?.hasVoted || false;
+
+  // Create comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("POST", `/api/battles/${battleId}/comments`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/battles", battleId, "comments"] });
+      setCommentText("");
+      toast({ title: "Комментарий добавлен" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка при добавлении комментария", variant: "destructive" });
+    },
+  });
+
+  // Vote on comment mutation
+  const voteCommentMutation = useMutation({
+    mutationFn: async ({ commentId, value }: { commentId: number; value: 1 | -1 }) => {
+      return apiRequest("POST", `/api/battle-comments/${commentId}/vote`, { value });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/battles", battleId, "comments"] });
+    },
+  });
+
+  // Vote on battle mutation
+  const voteBattleMutation = useMutation({
+    mutationFn: async (entryId: number) => {
+      return apiRequest("POST", `/api/battles/${battleId}/vote`, { entryId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/battles", battleId, "vote"] });
+      toast({ title: "Голос засчитан!", description: "Вы получили 5 XP" });
+    },
+    onError: (err: any) => {
+      toast({ title: err.message || "Ошибка при голосовании", variant: "destructive" });
+    },
+  });
+
+  // Convert API comments to the local format with safe defaults
+  const comments: Comment[] = apiComments.map((c) => {
+    let formattedDate = "недавно";
+    try {
+      if (c.createdAt) {
+        formattedDate = new Date(c.createdAt).toLocaleString("ru");
+      }
+    } catch {
+      formattedDate = "недавно";
+    }
+    
+    return {
+      id: c.id,
+      author: `Пользователь ${c.profileId}`,
+      content: c.content || "",
+      createdAt: formattedDate,
+      likes: typeof c.likes === "number" ? c.likes : 0,
+      dislikes: typeof c.dislikes === "number" ? c.dislikes : 0,
+      userVote: localCommentVotes[c.id] || null,
+    };
+  });
 
   // Check if we should auto-open file picker
   useEffect(() => {
@@ -204,7 +276,13 @@ export default function BattleDetail() {
       return;
     }
     if (!selectedVote) return;
-    toast({ title: "Голос засчитан!", description: "Вы получили 5 XP" });
+    if (hasAlreadyVoted) {
+      toast({ title: "Вы уже голосовали в этом батле", variant: "destructive" });
+      return;
+    }
+    // In a real app, we'd use actual entry IDs
+    const entryId = selectedVote === "creator" ? 1 : 2;
+    voteBattleMutation.mutate(entryId);
   };
 
   const handleJoinBattle = () => {
@@ -232,25 +310,7 @@ export default function BattleDetail() {
       toast({ title: "Войдите, чтобы комментировать" });
       return;
     }
-    
-    setIsSubmittingComment(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const newComment: Comment = {
-        id: comments.length + 1,
-        author: user.firstName || "Пользователь",
-        content: commentText,
-        createdAt: "только что",
-        likes: 0,
-        dislikes: 0,
-        userVote: null,
-      };
-      setComments([newComment, ...comments]);
-      setCommentText("");
-      setIsSubmittingComment(false);
-      toast({ title: "Комментарий добавлен" });
-    }, 500);
+    createCommentMutation.mutate(commentText.trim());
   };
 
   const handleCommentVote = (commentId: number, voteType: "like" | "dislike") => {
@@ -259,32 +319,13 @@ export default function BattleDetail() {
       return;
     }
 
-    setComments(comments.map(comment => {
-      if (comment.id !== commentId) return comment;
-      
-      const previousVote = comment.userVote;
-      let newLikes = comment.likes;
-      let newDislikes = comment.dislikes;
-      let newVote: "like" | "dislike" | null = voteType;
-
-      // Remove previous vote
-      if (previousVote === "like") newLikes--;
-      if (previousVote === "dislike") newDislikes--;
-
-      // Add new vote or toggle off
-      if (previousVote === voteType) {
-        newVote = null;
-      } else {
-        if (voteType === "like") newLikes++;
-        if (voteType === "dislike") newDislikes++;
-      }
-
-      return {
-        ...comment,
-        likes: newLikes,
-        dislikes: newDislikes,
-        userVote: newVote,
-      };
+    const value = voteType === "like" ? 1 : -1;
+    voteCommentMutation.mutate({ commentId, value: value as 1 | -1 });
+    
+    // Optimistic update for UI
+    setLocalCommentVotes(prev => ({
+      ...prev,
+      [commentId]: prev[commentId] === voteType ? null : voteType,
     }));
   };
 
@@ -558,14 +599,34 @@ export default function BattleDetail() {
               )}
             </div>
             
-            <Button 
-              className="w-full bg-[#FF6030] hover:bg-[#E55525] text-white rounded-xl"
-              onClick={handleVote}
-              disabled={!selectedVote}
-              data-testid="button-submit-vote"
-            >
-              Голосовать и получить <Badge className="ml-2 bg-white/20 text-white">5XP</Badge>
-            </Button>
+            {hasAlreadyVoted ? (
+              <Button 
+                className="w-full bg-muted text-muted-foreground rounded-xl cursor-not-allowed"
+                disabled
+                data-testid="button-already-voted"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Вы уже голосовали
+              </Button>
+            ) : (
+              <Button 
+                className="w-full bg-[#FF6030] hover:bg-[#E55525] text-white rounded-xl"
+                onClick={handleVote}
+                disabled={!selectedVote || voteBattleMutation.isPending}
+                data-testid="button-submit-vote"
+              >
+                {voteBattleMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Голосование...
+                  </>
+                ) : (
+                  <>
+                    Голосовать и получить <Badge className="ml-2 bg-white/20 text-white">5XP</Badge>
+                  </>
+                )}
+              </Button>
+            )}
           </Card>
         )}
 
@@ -643,7 +704,7 @@ export default function BattleDetail() {
                 <Button 
                   className="bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl gap-2"
                   onClick={handleSubmitComment}
-                  disabled={!commentText.trim() || isSubmittingComment}
+                  disabled={!commentText.trim() || createCommentMutation.isPending}
                   data-testid="button-submit-comment"
                 >
                   <Send className="h-4 w-4" />

@@ -1,6 +1,7 @@
 import { db } from "./db";
 import {
   users, profiles, tasks, taskSolutions, taskDrafts, taskVotes, taskFavorites, battles, battleEntries, battleVotes,
+  battleComments, battleCommentVotes,
   skillAssessments, assessmentQuestions, mentors, mentorSlots, mentorBookings, mentorReviews, notifications, companies,
   type User, type InsertUser,
   type Profile, type InsertProfile,
@@ -12,6 +13,8 @@ import {
   type Battle, type InsertBattle,
   type BattleEntry, type InsertBattleEntry,
   type BattleVote, type InsertBattleVote,
+  type BattleComment, type InsertBattleComment,
+  type BattleCommentVote, type InsertBattleCommentVote,
   type SkillAssessment, type InsertSkillAssessment,
   type Mentor, type InsertMentor,
   type MentorSlot, type InsertMentorSlot,
@@ -56,6 +59,15 @@ export interface IStorage {
   getBattleEntries(battleId: number): Promise<BattleEntry[]>;
   createBattleEntry(entry: InsertBattleEntry): Promise<BattleEntry>;
   createBattleVote(vote: InsertBattleVote): Promise<BattleVote>;
+  getBattleVote(battleId: number, voterId: number): Promise<BattleVote | undefined>;
+  markBattleVoteXpAwarded(voteId: number): Promise<void>;
+
+  // Battle Comments
+  getBattleComments(battleId: number): Promise<BattleComment[]>;
+  createBattleComment(comment: InsertBattleComment): Promise<BattleComment>;
+  getBattleCommentVote(commentId: number, profileId: number): Promise<BattleCommentVote | undefined>;
+  upsertBattleCommentVote(commentId: number, profileId: number, value: number): Promise<BattleCommentVote>;
+  updateBattleCommentCounts(commentId: number): Promise<void>;
 
   // Skill Assessments
   getAssessment(userId: number): Promise<SkillAssessment | undefined>;
@@ -152,11 +164,24 @@ export class DatabaseStorage implements IStorage {
   async upsertProfile(authUid: string, email: string): Promise<Profile> {
     const existing = await this.getProfileByAuthUid(authUid);
     if (existing) {
+      // Ensure existing profile has a linked user
+      if (!existing.userId) {
+        // Create a backing user record
+        const [user] = await db.insert(users).values({ email, authUid }).returning();
+        const [updated] = await db.update(profiles)
+          .set({ userId: user.id })
+          .where(eq(profiles.id, existing.id))
+          .returning();
+        return updated;
+      }
       return existing;
     }
+    // Create user first, then profile with userId link
+    const [user] = await db.insert(users).values({ email, authUid }).returning();
     const [newProfile] = await db.insert(profiles).values({
       authUid,
       email,
+      userId: user.id,
     }).returning();
     return newProfile;
   }
@@ -263,6 +288,54 @@ export class DatabaseStorage implements IStorage {
   async createBattleVote(vote: InsertBattleVote): Promise<BattleVote> {
     const [newVote] = await db.insert(battleVotes).values(vote).returning();
     return newVote;
+  }
+
+  async getBattleVote(battleId: number, voterId: number): Promise<BattleVote | undefined> {
+    const [vote] = await db.select().from(battleVotes)
+      .where(and(eq(battleVotes.battleId, battleId), eq(battleVotes.voterId, voterId)));
+    return vote;
+  }
+
+  async markBattleVoteXpAwarded(voteId: number): Promise<void> {
+    await db.update(battleVotes).set({ xpAwarded: true }).where(eq(battleVotes.id, voteId));
+  }
+
+  // Battle Comments
+  async getBattleComments(battleId: number): Promise<BattleComment[]> {
+    return await db.select().from(battleComments)
+      .where(eq(battleComments.battleId, battleId))
+      .orderBy(desc(battleComments.createdAt));
+  }
+
+  async createBattleComment(comment: InsertBattleComment): Promise<BattleComment> {
+    const [newComment] = await db.insert(battleComments).values(comment).returning();
+    return newComment;
+  }
+
+  async getBattleCommentVote(commentId: number, profileId: number): Promise<BattleCommentVote | undefined> {
+    const [vote] = await db.select().from(battleCommentVotes)
+      .where(and(eq(battleCommentVotes.commentId, commentId), eq(battleCommentVotes.profileId, profileId)));
+    return vote;
+  }
+
+  async upsertBattleCommentVote(commentId: number, profileId: number, value: number): Promise<BattleCommentVote> {
+    const existing = await this.getBattleCommentVote(commentId, profileId);
+    if (existing) {
+      const [updated] = await db.update(battleCommentVotes)
+        .set({ value })
+        .where(eq(battleCommentVotes.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [vote] = await db.insert(battleCommentVotes).values({ commentId, profileId, value }).returning();
+    return vote;
+  }
+
+  async updateBattleCommentCounts(commentId: number): Promise<void> {
+    const votes = await db.select().from(battleCommentVotes).where(eq(battleCommentVotes.commentId, commentId));
+    const likes = votes.filter(v => v.value === 1).length;
+    const dislikes = votes.filter(v => v.value === -1).length;
+    await db.update(battleComments).set({ likes, dislikes }).where(eq(battleComments.id, commentId));
   }
 
   // Skill Assessments

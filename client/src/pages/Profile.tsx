@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Edit2, Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { SiTelegram, SiBehance, SiDribbble } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -20,46 +20,127 @@ import {
 } from "@/components/ui/dropdown-menu";
 import MainLayout from "@/components/layout/MainLayout";
 import { getLevelInfo, XP_REWARDS } from "@shared/xp";
-import type { TaskDraft } from "@shared/schema";
+import type { TaskDraft, Profile as ProfileType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function Profile() {
   const [, navigate] = useLocation();
-  const [isEditing, setIsEditing] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [telegramLink, setTelegramLink] = useState("");
-  const [behanceLink, setBehanceLink] = useState("");
-  const [dribbbleLink, setDribbbleLink] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
+  // Form state
+  const [fullName, setFullName] = useState("");
+  const [bio, setBio] = useState("");
+  const [company, setCompany] = useState("");
+  const [location, setLocation] = useState("");
+  const [telegramLink, setTelegramLink] = useState("");
+  const [behanceLink, setBehanceLink] = useState("");
+  const [dribbbleLink, setDribbbleLink] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [initialValues, setInitialValues] = useState({
+    fullName: "",
+    bio: "",
+    company: "",
+    location: "",
+    telegramLink: "",
+    behanceLink: "",
+    dribbbleLink: "",
+    avatarUrl: null as string | null,
+  });
+
+  // Fetch profile data
+  const { data: profileData } = useQuery<ProfileType>({
+    queryKey: ["/api/profiles", user?.id],
+    enabled: !!user?.id,
+  });
+
+  // Set initial values when profile loads
+  useEffect(() => {
+    if (profileData) {
+      const values = {
+        fullName: profileData.fullName || "",
+        bio: profileData.bio || "",
+        company: profileData.company || "",
+        location: profileData.location || "",
+        telegramLink: (profileData as any).telegramLink || "",
+        behanceLink: (profileData as any).behanceLink || "",
+        dribbbleLink: (profileData as any).dribbbleLink || "",
+        avatarUrl: profileData.avatarUrl || null,
+      };
+      setFullName(values.fullName);
+      setBio(values.bio);
+      setCompany(values.company);
+      setLocation(values.location);
+      setTelegramLink(values.telegramLink);
+      setBehanceLink(values.behanceLink);
+      setDribbbleLink(values.dribbbleLink);
+      setAvatarUrl(values.avatarUrl);
+      setInitialValues(values);
+    }
+  }, [profileData]);
+
   const mockUserXp = 450;
   const levelInfo = getLevelInfo(mockUserXp);
 
+  // Check if form has changes
+  const hasChanges = 
+    fullName !== initialValues.fullName ||
+    bio !== initialValues.bio ||
+    company !== initialValues.company ||
+    location !== initialValues.location ||
+    telegramLink !== initialValues.telegramLink ||
+    behanceLink !== initialValues.behanceLink ||
+    dribbbleLink !== initialValues.dribbbleLink;
+
   const saveProfileMutation = useMutation({
-    mutationFn: async (data: { telegramLink?: string; behanceLink?: string; dribbbleLink?: string }) => {
+    mutationFn: async (data: Partial<ProfileType>) => {
       if (!user?.id) throw new Error("Not authenticated");
       return apiRequest("PATCH", `/api/profiles/${user.id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
       toast({ title: "Профиль сохранён!" });
-      setIsEditing(false);
+      setInitialValues({
+        fullName,
+        bio,
+        company,
+        location,
+        telegramLink,
+        behanceLink,
+        dribbbleLink,
+        avatarUrl,
+      });
     },
     onError: () => {
       toast({ title: "Ошибка при сохранении", variant: "destructive" });
     },
   });
 
+  const saveAvatarMutation = useMutation({
+    mutationFn: async (url: string | null) => {
+      if (!user?.id) throw new Error("Not authenticated");
+      return apiRequest("PATCH", `/api/profiles/${user.id}`, { avatarUrl: url });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
+      toast({ title: "Аватарка сохранена!" });
+    },
+    onError: () => {
+      toast({ title: "Ошибка при сохранении аватарки", variant: "destructive" });
+    },
+  });
+
   const handleSave = () => {
     saveProfileMutation.mutate({
-      telegramLink: telegramLink || undefined,
-      behanceLink: behanceLink || undefined,
-      dribbbleLink: dribbbleLink || undefined,
+      fullName: fullName || undefined,
+      bio: bio || undefined,
+      company: company || undefined,
+      location: location || undefined,
+      telegramUsername: telegramLink || undefined,
     });
   };
 
@@ -72,13 +153,18 @@ export default function Profile() {
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // In a real app, you'd upload to a file storage service
+      // For now, we'll use a blob URL and save it
       const url = URL.createObjectURL(file);
       setAvatarUrl(url);
+      // Auto-save avatar
+      saveAvatarMutation.mutate(url);
     }
   };
 
   const handleDeleteAvatar = () => {
     setAvatarUrl(null);
+    saveAvatarMutation.mutate(null);
   };
 
   const hasSocialLinks = telegramLink || behanceLink || dribbbleLink;
@@ -140,16 +226,6 @@ export default function Profile() {
         className="max-w-2xl space-y-8"
       >
         <Card className="relative">
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute top-4 right-4 h-9 w-9 border-border/50"
-            onClick={() => setIsEditing(!isEditing)}
-            data-testid="button-edit-profile"
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-
           <CardContent className="p-6">
             <div className="flex items-start gap-6">
               <div className="relative">
@@ -166,8 +242,15 @@ export default function Profile() {
                     <button className="cursor-pointer" data-testid="button-avatar-menu">
                       <Avatar className="w-24 h-24 border-2 border-border/30">
                         <AvatarImage src={avatarUrl || ""} />
-                        <AvatarFallback className="text-2xl bg-muted text-muted-foreground">ИП</AvatarFallback>
+                        <AvatarFallback className="text-2xl bg-muted text-muted-foreground">
+                          {fullName ? fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "ИП"}
+                        </AvatarFallback>
                       </Avatar>
+                      {saveAvatarMutation.isPending && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                        </div>
+                      )}
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
@@ -192,8 +275,8 @@ export default function Profile() {
                 </DropdownMenu>
               </div>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold">Иван Петров</h1>
-                <p className="text-muted-foreground">Product Designer</p>
+                <h1 className="text-2xl font-bold">{fullName || "Иван Петров"}</h1>
+                <p className="text-muted-foreground">{bio || "Product Designer"}</p>
                 {hasSocialLinks && (
                   <div className="flex gap-2 mt-3">
                     {telegramLink && (
@@ -312,25 +395,45 @@ export default function Profile() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Имя</Label>
-                  <Input defaultValue="Иван Петров" disabled={!isEditing} />
+                  <Input 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Иван Петров"
+                    data-testid="input-fullname"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <Input defaultValue="ivan@example.com" disabled />
+                  <Input defaultValue={user?.email || ""} disabled />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>О себе</Label>
-                <Input defaultValue="Product Designer с 5-летним опытом" disabled={!isEditing} />
+                <Input 
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Product Designer с 5-летним опытом"
+                  data-testid="input-bio"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Компания</Label>
-                  <Input defaultValue="Яндекс" disabled={!isEditing} />
+                  <Input 
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Яндекс"
+                    data-testid="input-company"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Город</Label>
-                  <Input defaultValue="Москва" disabled={!isEditing} />
+                  <Input 
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Москва"
+                    data-testid="input-location"
+                  />
                 </div>
               </div>
 
@@ -347,7 +450,6 @@ export default function Profile() {
                       placeholder="https://t.me/username" 
                       value={telegramLink}
                       onChange={(e) => setTelegramLink(e.target.value)}
-                      disabled={!isEditing}
                       data-testid="input-telegram-link"
                     />
                   </div>
@@ -359,7 +461,6 @@ export default function Profile() {
                       placeholder="https://behance.net/username" 
                       value={behanceLink}
                       onChange={(e) => setBehanceLink(e.target.value)}
-                      disabled={!isEditing}
                       data-testid="input-behance-link"
                     />
                   </div>
@@ -371,16 +472,15 @@ export default function Profile() {
                       placeholder="https://dribbble.com/username" 
                       value={dribbbleLink}
                       onChange={(e) => setDribbbleLink(e.target.value)}
-                      disabled={!isEditing}
                       data-testid="input-dribbble-link"
                     />
                   </div>
                 </div>
               </div>
               
-              {isEditing && (
+              {hasChanges && (
                 <Button 
-                  className="w-full mt-4" 
+                  className="w-full mt-4 bg-[#FF6030] hover:bg-[#E55525]" 
                   onClick={handleSave}
                   disabled={saveProfileMutation.isPending}
                   data-testid="button-save-profile"
