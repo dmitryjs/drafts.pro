@@ -36,6 +36,8 @@ export const SolutionStatus = {
 } as const;
 
 export const BattleStatus = {
+  MODERATION: "moderation",
+  REJECTED: "rejected",
   UPCOMING: "upcoming",
   ACTIVE: "active",
   VOTING: "voting",
@@ -351,6 +353,54 @@ export const xpTransactions = pgTable("xp_transactions", {
 });
 
 // ============================================
+// NOTIFICATIONS (УВЕДОМЛЕНИЯ)
+// ============================================
+
+export const NotificationType = {
+  BATTLE_APPROVED: "battle_approved",
+  BATTLE_REJECTED: "battle_rejected",
+  TASK_DELETED: "task_deleted",
+  BATTLE_DELETED: "battle_deleted",
+  SOLUTION_REVIEWED: "solution_reviewed",
+  CONTENT_MODERATED: "content_moderated",
+  XP_EARNED: "xp_earned",
+  LEVEL_UP: "level_up",
+} as const;
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata"),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ============================================
+// COMPANIES (КОМПАНИИ)
+// ============================================
+
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  email: text("email").notNull(),
+  password: text("password"),
+  logoUrl: text("logo_url"),
+  website: text("website"),
+  description: text("description"),
+  industry: text("industry"),
+  size: text("size"),
+  tasksCreated: integer("tasks_created").default(0),
+  battlesCreated: integer("battles_created").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ============================================
 // INSERT SCHEMAS
 // ============================================
 
@@ -371,6 +421,8 @@ export const insertMentorBookingSchema = createInsertSchema(mentorBookings).omit
 export const insertMentorReviewSchema = createInsertSchema(mentorReviews).omit({ id: true, createdAt: true });
 export const insertUserXpSchema = createInsertSchema(userXp).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertXpTransactionSchema = createInsertSchema(xpTransactions).omit({ id: true, createdAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true, updatedAt: true, tasksCreated: true, battlesCreated: true });
 
 // ============================================
 // TYPES
@@ -426,6 +478,12 @@ export type InsertUserXp = z.infer<typeof insertUserXpSchema>;
 
 export type XpTransaction = typeof xpTransactions.$inferSelect;
 export type InsertXpTransaction = z.infer<typeof insertXpTransactionSchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
 
 // Replit Auth models
 export * from "./models/auth";

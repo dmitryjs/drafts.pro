@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, Info, X } from "lucide-react";
+import { Upload, Info, X, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateBattleModalProps {
   open: boolean;
@@ -39,6 +42,27 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const createBattleMutation = useMutation({
+    mutationFn: async (data: { title: string; description: string; category: string; theme: string }) => {
+      return apiRequest("POST", "/api/battles", {
+        ...data,
+        slug: data.title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "") + "-" + Date.now(),
+        status: "moderation",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/battles"] });
+      toast({ title: "Батл отправлен на модерацию!" });
+      onOpenChange(false);
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: "Ошибка при создании батла", variant: "destructive" });
+    },
+  });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,8 +83,12 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
 
   const handleSubmit = () => {
     if (!selectedImage || !title.trim() || !category) return;
-    onOpenChange(false);
-    resetForm();
+    createBattleMutation.mutate({
+      title: title.trim(),
+      description: description.trim(),
+      category,
+      theme: category,
+    });
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -214,11 +242,18 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
             
             <Button 
               className="w-full mt-6 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl disabled:opacity-50"
-              disabled={!isFormValid}
+              disabled={!isFormValid || createBattleMutation.isPending}
               onClick={handleSubmit}
               data-testid="button-create-battle"
             >
-              Создать батл
+              {createBattleMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Создание...
+                </>
+              ) : (
+                "Создать батл"
+              )}
             </Button>
           </div>
         </div>

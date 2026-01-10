@@ -35,6 +35,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import TaskSubmitModal from "@/components/modals/TaskSubmitModal";
 
 const getLevelColor = (level: string) => {
   switch (level?.toLowerCase()) {
@@ -71,6 +72,7 @@ export default function TaskDetail() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("description");
   const [userSolution, setUserSolution] = useState<any>(null);
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
 
   const favoriteMutation = useMutation({
     mutationFn: async (taskId: number) => {
@@ -134,6 +136,7 @@ export default function TaskDetail() {
 
   const handleSubmitSolution = () => {
     if (!user) return;
+    setIsSubmitModalOpen(true);
   };
 
   const parseDescription = (description: string) => {
@@ -432,6 +435,15 @@ export default function TaskDetail() {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {task && (
+        <TaskSubmitModal
+          open={isSubmitModalOpen}
+          onOpenChange={setIsSubmitModalOpen}
+          taskId={task.id}
+          taskTitle={task.title}
+        />
+      )}
     </MainLayout>
   );
 }

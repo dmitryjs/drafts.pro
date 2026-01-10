@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Edit2, Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw } from "lucide-react";
+import { Edit2, Zap, Info, FileText, ChevronRight, Upload, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { SiTelegram, SiBehance, SiDribbble } from "react-icons/si";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -21,6 +21,9 @@ import {
 import MainLayout from "@/components/layout/MainLayout";
 import { getLevelInfo, XP_REWARDS } from "@shared/xp";
 import type { TaskDraft } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Profile() {
   const [, navigate] = useLocation();
@@ -30,9 +33,35 @@ export default function Profile() {
   const [behanceLink, setBehanceLink] = useState("");
   const [dribbbleLink, setDribbbleLink] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   const mockUserXp = 450;
   const levelInfo = getLevelInfo(mockUserXp);
+
+  const saveProfileMutation = useMutation({
+    mutationFn: async (data: { telegramLink?: string; behanceLink?: string; dribbbleLink?: string }) => {
+      if (!user?.id) throw new Error("Not authenticated");
+      return apiRequest("PATCH", `/api/profiles/${user.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Профиль сохранён!" });
+      setIsEditing(false);
+    },
+    onError: () => {
+      toast({ title: "Ошибка при сохранении", variant: "destructive" });
+    },
+  });
+
+  const handleSave = () => {
+    saveProfileMutation.mutate({
+      telegramLink: telegramLink || undefined,
+      behanceLink: behanceLink || undefined,
+      dribbbleLink: dribbbleLink || undefined,
+    });
+  };
 
   const { data: drafts } = useQuery<TaskDraft[]>({
     queryKey: ["/api/drafts"],
@@ -90,7 +119,7 @@ export default function Profile() {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Уровень</span>
-            <span className="font-medium">{levelInfo.level} - {levelInfo.title}</span>
+            <span className="font-medium">Уровень {levelInfo.level}</span>
           </div>
         </div>
       </div>
@@ -243,7 +272,7 @@ export default function Profile() {
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <span className="font-semibold text-lg">{levelInfo.title}</span>
+                      <span className="font-semibold text-lg">Уровень {levelInfo.level}</span>
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Zap className="h-4 w-4 text-[#FF6030]" />
                         <span>{levelInfo.totalXp} XP</span>
@@ -350,8 +379,20 @@ export default function Profile() {
               </div>
               
               {isEditing && (
-                <Button className="w-full mt-4" onClick={() => setIsEditing(false)}>
-                  Сохранить изменения
+                <Button 
+                  className="w-full mt-4" 
+                  onClick={handleSave}
+                  disabled={saveProfileMutation.isPending}
+                  data-testid="button-save-profile"
+                >
+                  {saveProfileMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    "Сохранить изменения"
+                  )}
                 </Button>
               )}
             </CardContent>
