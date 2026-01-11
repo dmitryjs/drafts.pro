@@ -15,7 +15,9 @@ import {
   Upload,
   ChevronRight,
   Share2,
-  Flag
+  Flag,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -83,6 +85,25 @@ export default function TaskDetail() {
       toast({ title: "Обновлено" });
     },
   });
+
+  const voteMutation = useMutation({
+    mutationFn: async ({ taskId, value }: { taskId: number; value: 1 | -1 }) => {
+      return apiRequest("POST", `/api/tasks/${taskId}/vote`, { value });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", slug] });
+    },
+  });
+
+  const handleVote = (value: 1 | -1) => {
+    if (!user) {
+      toast({ title: "Войдите, чтобы голосовать" });
+      return;
+    }
+    if (task) {
+      voteMutation.mutate({ taskId: task.id, value });
+    }
+  };
 
   const handleFavorite = () => {
     if (!user) {
@@ -229,6 +250,26 @@ export default function TaskDetail() {
           
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
+            {/* Like */}
+            <button
+              onClick={() => handleVote(1)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
+              data-testid="button-like"
+            >
+              <ThumbsUp className="h-4 w-4" />
+              <span className="text-sm font-medium">{task.likes || 0}</span>
+            </button>
+            
+            {/* Dislike */}
+            <button
+              onClick={() => handleVote(-1)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
+              data-testid="button-dislike"
+            >
+              <ThumbsDown className="h-4 w-4" />
+              <span className="text-sm font-medium">{task.dislikes || 0}</span>
+            </button>
+            
             <button
               onClick={handleFavorite}
               className={cn(

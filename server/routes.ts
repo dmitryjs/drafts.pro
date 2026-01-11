@@ -331,16 +331,17 @@ export async function registerRoutes(
       const taskId = parseInt(req.params.taskId);
       const { value } = req.body as { value: 1 | -1 };
       const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
-      if (!profile || !profile.userId) {
+      if (!profile) {
         return res.status(401).json({ message: "Необходима авторизация" });
       }
-      const existingVote = await storage.getTaskVote(taskId, profile.userId);
+      const profileId = profile.id;
+      const existingVote = await storage.getTaskVote(taskId, profileId);
       if (existingVote && existingVote.value === value) {
-        await storage.deleteTaskVote(taskId, profile.userId);
+        await storage.deleteTaskVote(taskId, profileId);
         const counts = await storage.getTaskVoteCounts(taskId);
         return res.json({ ...counts, userVote: null });
       }
-      await storage.upsertTaskVote(taskId, profile.userId, value);
+      await storage.upsertTaskVote(taskId, profileId, value);
       const counts = await storage.getTaskVoteCounts(taskId);
       res.json({ ...counts, userVote: value });
     } catch (err) {
@@ -356,8 +357,8 @@ export async function registerRoutes(
       let userVote = null;
       if (req.user?.claims?.sub) {
         const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
-        if (profile?.userId) {
-          const vote = await storage.getTaskVote(taskId, profile.userId);
+        if (profile?.id) {
+          const vote = await storage.getTaskVote(taskId, profile.id);
           userVote = vote?.value || null;
         }
       }
@@ -373,15 +374,16 @@ export async function registerRoutes(
     try {
       const taskId = parseInt(req.params.taskId);
       const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
-      if (!profile || !profile.userId) {
+      if (!profile) {
         return res.status(401).json({ message: "Необходима авторизация" });
       }
-      const existing = await storage.getTaskFavorite(taskId, profile.userId);
+      const profileId = profile.id;
+      const existing = await storage.getTaskFavorite(taskId, profileId);
       if (existing) {
-        await storage.removeTaskFavorite(taskId, profile.userId);
+        await storage.removeTaskFavorite(taskId, profileId);
         return res.json({ isFavorite: false });
       }
-      await storage.addTaskFavorite(taskId, profile.userId);
+      await storage.addTaskFavorite(taskId, profileId);
       res.json({ isFavorite: true });
     } catch (err) {
       console.error('Error toggling favorite:', err);
@@ -395,8 +397,8 @@ export async function registerRoutes(
       let isFavorite = false;
       if (req.user?.claims?.sub) {
         const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
-        if (profile?.userId) {
-          const fav = await storage.getTaskFavorite(taskId, profile.userId);
+        if (profile?.id) {
+          const fav = await storage.getTaskFavorite(taskId, profile.id);
           isFavorite = !!fav;
         }
       }
@@ -410,10 +412,10 @@ export async function registerRoutes(
   app.get('/api/favorites', isAuthenticated, async (req: any, res) => {
     try {
       const profile = await storage.getProfileByAuthUid(req.user.claims.sub);
-      if (!profile || !profile.userId) {
+      if (!profile) {
         return res.json([]);
       }
-      const favorites = await storage.getUserFavorites(profile.userId);
+      const favorites = await storage.getUserFavorites(profile.id);
       res.json(favorites);
     } catch (err) {
       console.error('Error fetching favorites:', err);
