@@ -1292,14 +1292,14 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Battle not found" });
       }
 
-      await storage.updateBattle(battleId, { status: "upcoming" });
+      await storage.updateBattle(battleId, { status: "active" });
 
       if (battle.createdBy) {
         await sendAdminNotification(
           battle.createdBy,
           "battle_approved",
           "Ваш батл одобрен",
-          "Ваш батл прошёл модерацию и будет опубликован",
+          "Ваш батл прошёл модерацию и теперь активен",
           { battleId, battleTitle: battle.title }
         );
       }
