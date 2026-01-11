@@ -1292,7 +1292,14 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Battle not found" });
       }
 
-      await storage.updateBattle(battleId, { status: "active" });
+      // Set voting end date to 24 hours from now
+      const votingEndDate = new Date();
+      votingEndDate.setHours(votingEndDate.getHours() + 24);
+      
+      await storage.updateBattle(battleId, { 
+        status: "active",
+        votingEndDate: votingEndDate
+      });
 
       if (battle.createdBy) {
         await sendAdminNotification(

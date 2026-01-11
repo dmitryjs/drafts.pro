@@ -168,7 +168,37 @@ export default function BattleDetail() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [localCommentVotes, setLocalCommentVotes] = useState<Record<number, "like" | "dislike" | null>>({});
+  const [timeRemaining, setTimeRemaining] = useState<string>("24 часа 00 минут");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Live countdown timer - calculates from mock start time (simulating 24h countdown)
+  useEffect(() => {
+    // For demo purposes, simulate a countdown that started recently
+    // In production, this would use the real battle.votingEndDate from the API
+    const startTime = Date.now();
+    const endTime = startTime + 24 * 60 * 60 * 1000; // 24 hours from now
+    
+    const updateTimer = () => {
+      const now = Date.now();
+      const remaining = endTime - now;
+      
+      if (remaining <= 0) {
+        setTimeRemaining("Голосование завершено");
+        return;
+      }
+      
+      const hours = Math.floor(remaining / (1000 * 60 * 60));
+      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+      
+      setTimeRemaining(`${hours} ч ${minutes} мин ${seconds} сек`);
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const phase = slugToPhase[slug] || "voting";
   const battle = mockBattlesByPhase[phase];
@@ -549,7 +579,7 @@ export default function BattleDetail() {
             </div>
             
             <p className="text-sm text-muted-foreground mb-2">Оставшееся время (24 часа):</p>
-            <p className="text-2xl font-bold text-[#1D1D1F] mb-6" data-testid="text-time-remaining">{battle.timeRemaining}</p>
+            <p className="text-2xl font-bold text-[#1D1D1F] mb-6" data-testid="text-time-remaining">{timeRemaining}</p>
             
             {/* Vote Options */}
             <div className="space-y-3 mb-6">
