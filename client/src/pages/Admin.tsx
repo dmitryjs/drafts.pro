@@ -72,6 +72,7 @@ import {
 } from "recharts";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 interface AdminStats {
   usersCount: number;
@@ -187,8 +188,20 @@ export default function Admin() {
     level: "junior",
   });
 
+  const { user } = useAuth();
+  
   const { data: isAdminCheck, isLoading: checkingAdmin } = useQuery<{ isAdmin: boolean }>({
-    queryKey: ["/api/admin/check"],
+    queryKey: ["/api/admin/check", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { isAdmin: false };
+      // Передаем userId в query параметре
+      const response = await fetch(`/api/admin/check?userId=${user.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return { isAdmin: false };
+      return response.json();
+    },
+    enabled: !!user?.id,
   });
 
   const { data: stats } = useQuery<AdminStats>({

@@ -40,28 +40,102 @@ const getCategoryDot = (category: string) => {
   }
 };
 
+// Mock companies data
+const mockCompanies: Record<string, any> = {
+  "yandex-eda": {
+    id: 1,
+    name: "Яндекс.Еда",
+    slug: "yandex-eda",
+    country: "RU",
+    industry: "Доставка еды",
+    description: "Крупнейший сервис доставки еды в России. Мы создаем удобные решения для заказа еды и доставки.",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/9/9b/Yandex_Eda_logo.svg",
+  },
+  "tinkoff": {
+    id: 2,
+    name: "Тинькофф",
+    slug: "tinkoff",
+    country: "RU",
+    industry: "Финансы",
+    description: "Онлайн-банк и финтех компания. Мы создаем удобные финансовые продукты для миллионов пользователей.",
+    logoUrl: "",
+  },
+  "sber": {
+    id: 3,
+    name: "Сбер",
+    slug: "sber",
+    country: "RU",
+    industry: "Банкинг",
+    description: "Крупнейший банк России. Мы развиваем цифровые продукты и сервисы для бизнеса и частных клиентов.",
+    logoUrl: "",
+  },
+  "avito": {
+    id: 4,
+    name: "Авито",
+    slug: "avito",
+    country: "RU",
+    industry: "Маркетплейс",
+    description: "Крупнейшая площадка объявлений в России. Мы помогаем людям находить то, что им нужно.",
+    logoUrl: "",
+  },
+  "google": {
+    id: 5,
+    name: "Google",
+    slug: "google",
+    country: "US",
+    industry: "Технологии",
+    description: "Мировой лидер в области технологий. Мы создаем продукты, которые помогают миллиардам людей.",
+    logoUrl: "",
+  },
+};
+
+// Mock tasks for companies
+const mockCompanyTasks: Record<string, any[]> = {
+  "yandex-eda": [
+    { id: 2, title: "Создать дизайн мобильного приложения для доставки еды", category: "UX/UI", level: "Senior", slug: "food-delivery-app-design", solutionsCount: 34 },
+  ],
+  "tinkoff": [
+    { id: 3, title: "Разработать логотип для финтех стартапа", category: "Графический", level: "Junior", slug: "fintech-logo-design", solutionsCount: 18 },
+  ],
+  "sber": [
+    { id: 4, title: "UX исследование для банковского приложения", category: "UX/UI", level: "Senior", slug: "banking-app-ux-research", solutionsCount: 56 },
+  ],
+  "avito": [
+    { id: 6, title: "Дизайн интерфейса для маркетплейса", category: "UX/UI", level: "Senior", slug: "marketplace-interface-design", solutionsCount: 78 },
+  ],
+  "google": [
+    { id: 8, title: "Создать дизайн-систему для веб-платформы", category: "Продукт", level: "Lead", slug: "design-system-web-platform", solutionsCount: 112 },
+  ],
+};
+
 export default function CompanyProfile() {
   const [, params] = useRoute("/companies/:slug");
   const slug = params?.slug || "";
 
-  const { data: company, isLoading: companyLoading } = useQuery<any>({
+  const { data: apiCompany, isLoading: companyLoading } = useQuery<any>({
     queryKey: ["/api/companies", slug],
     queryFn: async () => {
       const res = await fetch(`/api/companies/${slug}`);
-      if (!res.ok) throw new Error("Company not found");
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Failed to fetch company");
       return res.json();
     },
+    enabled: !!slug,
   });
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery<any[]>({
+  const company = apiCompany || mockCompanies[slug];
+
+  const { data: apiTasks = [], isLoading: tasksLoading } = useQuery<any[]>({
     queryKey: ["/api/companies", slug, "tasks"],
     queryFn: async () => {
       const res = await fetch(`/api/companies/${slug}/tasks`);
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: !!company,
+    enabled: !!company && !!slug,
   });
+
+  const tasks = apiTasks.length > 0 ? apiTasks : (mockCompanyTasks[slug] || []);
 
   if (companyLoading) {
     return (
@@ -93,7 +167,7 @@ export default function CompanyProfile() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl"
+        className="max-w-4xl mx-auto"
       >
         <div className="flex items-center gap-3 mb-6">
           <Link href="/">

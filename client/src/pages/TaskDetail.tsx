@@ -3,7 +3,6 @@ import { useRoute, Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
   ArrowLeft, 
-  Star,
   MoreHorizontal,
   Send,
   Check,
@@ -16,14 +15,16 @@ import {
   ChevronRight,
   Share2,
   Flag,
-  ThumbsUp,
-  ThumbsDown
+  Loader2,
+  Zap
 } from "lucide-react";
+import LikeIcon from "@assets/icons/Like.svg";
+import DislikeIcon from "@assets/icons/Dislike.svg";
+import FavoritesIcon from "@assets/icons/Favorites.svg";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserAvatar from "@/components/UserAvatar";
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import TaskSubmitModal from "@/components/modals/TaskSubmitModal";
+import TaskSubmitSuccessModal from "@/components/modals/TaskSubmitSuccessModal";
 
 const getLevelColor = (level: string) => {
   switch (level?.toLowerCase()) {
@@ -65,16 +67,148 @@ const getCategoryLabel = (category: string) => {
   }
 };
 
+// Mock tasks data for fallback
+const mockTasksBySlug: Record<string, any> = {
+  "retention-onboarding": {
+    id: 1,
+    title: "Увеличить Retention на онбординге в B2C продукте",
+    description: "Необходимо увеличить ретеншен в продукте который работает в сфере B2C\n\n**Требования:**\n- Анализ текущего онбординга\n- Предложение улучшений\n- Прототипы решений",
+    category: "product",
+    level: "middle",
+    author: "Дмитрий Галкин",
+    authorId: 1,
+    likes: 324,
+    dislikes: 43,
+    comments: 43,
+    slug: "retention-onboarding",
+    solutionsCount: 12,
+    tags: ["онбординг", "retention", "B2C"],
+  },
+  "food-delivery-app-design": {
+    id: 2,
+    title: "Создать дизайн мобильного приложения для доставки еды",
+    description: "Нужен современный и удобный дизайн для iOS и Android приложения\n\n**Требования:**\n- Адаптивный дизайн\n- Удобная навигация\n- Современный UI",
+    category: "uxui",
+    level: "senior",
+    company: "Яндекс.Еда",
+    companySlug: "yandex-eda",
+    companyId: 1,
+    likes: 456,
+    dislikes: 12,
+    comments: 89,
+    slug: "food-delivery-app-design",
+    solutionsCount: 34,
+    tags: ["мобильное приложение", "доставка", "UI/UX"],
+  },
+  "fintech-logo-design": {
+    id: 3,
+    title: "Разработать логотип для финтех стартапа",
+    description: "Требуется минималистичный и запоминающийся логотип\n\n**Требования:**\n- Минимализм\n- Запоминаемость\n- Адаптивность",
+    category: "graphic",
+    level: "junior",
+    company: "Тинькофф",
+    companySlug: "tinkoff",
+    companyId: 2,
+    likes: 234,
+    dislikes: 8,
+    comments: 45,
+    slug: "fintech-logo-design",
+    solutionsCount: 18,
+    tags: ["логотип", "финтех", "брендинг"],
+  },
+  "banking-app-ux-research": {
+    id: 4,
+    title: "UX исследование для банковского приложения",
+    description: "Провести исследование пользовательского опыта и предложить улучшения\n\n**Требования:**\n- Исследование пользователей\n- Анализ конкурентов\n- Рекомендации",
+    category: "uxui",
+    level: "senior",
+    company: "Сбер",
+    companySlug: "sber",
+    companyId: 3,
+    likes: 567,
+    dislikes: 15,
+    comments: 123,
+    slug: "banking-app-ux-research",
+    solutionsCount: 56,
+    tags: ["UX", "исследование", "банкинг"],
+  },
+  "product-3d-model": {
+    id: 5,
+    title: "Создать 3D модель продукта для презентации",
+    description: "Нужна качественная 3D модель для маркетинговых материалов\n\n**Требования:**\n- Высокое качество\n- Реалистичность\n- Готовность к рендеру",
+    category: "3d",
+    level: "middle",
+    author: "Анна Петрова",
+    authorId: 2,
+    likes: 189,
+    dislikes: 5,
+    comments: 23,
+    slug: "product-3d-model",
+    solutionsCount: 9,
+    tags: ["3D", "моделирование", "визуализация"],
+  },
+  "marketplace-interface-design": {
+    id: 6,
+    title: "Дизайн интерфейса для маркетплейса",
+    description: "Создать удобный и интуитивный интерфейс для онлайн-магазина\n\n**Требования:**\n- Удобная навигация\n- Быстрый поиск\n- Удобная корзина",
+    category: "uxui",
+    level: "senior",
+    company: "Авито",
+    companySlug: "avito",
+    companyId: 4,
+    likes: 678,
+    dislikes: 22,
+    comments: 156,
+    slug: "marketplace-interface-design",
+    solutionsCount: 78,
+    tags: ["маркетплейс", "интерфейс", "e-commerce"],
+  },
+  "corporate-website-redesign": {
+    id: 7,
+    title: "Кейс: Редизайн корпоративного сайта",
+    description: "Полный редизайн существующего корпоративного сайта с улучшением UX\n\n**Требования:**\n- Современный дизайн\n- Улучшение UX\n- Адаптивность",
+    category: "cases",
+    level: "lead",
+    author: "Иван Сидоров",
+    authorId: 3,
+    likes: 445,
+    dislikes: 18,
+    comments: 67,
+    slug: "corporate-website-redesign",
+    solutionsCount: 23,
+    tags: ["редизайн", "корпоративный сайт", "UX"],
+  },
+  "design-system-web-platform": {
+    id: 8,
+    title: "Создать дизайн-систему для веб-платформы",
+    description: "Разработать комплексную дизайн-систему с компонентами и гайдлайнами\n\n**Требования:**\n- Компоненты\n- Гайдлайны\n- Документация",
+    category: "product",
+    level: "lead",
+    company: "Google",
+    companySlug: "google",
+    companyId: 5,
+    likes: 789,
+    dislikes: 25,
+    comments: 234,
+    slug: "design-system-web-platform",
+    solutionsCount: 112,
+    tags: ["дизайн-система", "компоненты", "гайдлайны"],
+  },
+};
+
 export default function TaskDetail() {
   const [, params] = useRoute("/tasks/:slug");
   const slug = params?.slug || "";
-  const { data: task, isLoading } = useTask(slug);
+  const { data: apiTask, isLoading } = useTask(slug);
+  const task = apiTask || mockTasksBySlug[slug];
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("description");
   const [userSolution, setUserSolution] = useState<any>(null);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSolutionPending, setIsSolutionPending] = useState(false);
 
   const favoriteMutation = useMutation({
     mutationFn: async (taskId: number) => {
@@ -149,8 +283,10 @@ export default function TaskDetail() {
     );
   }
 
-  const authorName = task.author || task.authorName || "Аноним";
+  const isCompanyTask = !!task.company || !!task.companySlug;
+  const authorName = isCompanyTask ? (task.company || "Компания") : (task.author || task.authorName || "Аноним");
   const authorId = task.authorId || null;
+  const companySlug = task.companySlug || null;
   const attachments = task.attachments || [];
   const visibleAttachments = attachments.slice(0, 4);
   const remainingCount = Math.max(0, attachments.length - 4);
@@ -159,6 +295,19 @@ export default function TaskDetail() {
   const handleSubmitSolution = () => {
     if (!user) return;
     setIsSubmitModalOpen(true);
+  };
+
+  const handleSolutionSubmitted = (solutionData?: any) => {
+    setIsSolutionPending(true);
+    setIsSuccessModalOpen(true);
+    setIsSubmitModalOpen(false);
+    // Сохраняем решение локально для отображения
+    setUserSolution({ 
+      content: solutionData?.content || solutionData?.description || "",
+      description: solutionData?.description || "",
+      status: "pending",
+      evaluation: null 
+    });
   };
 
   const parseDescription = (description: string) => {
@@ -233,7 +382,14 @@ export default function TaskDetail() {
               </button>
             </Link>
             
-            {authorId ? (
+            {isCompanyTask && companySlug ? (
+              <Link href={`/companies/${companySlug}`}>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors cursor-pointer">
+                  <Building2 className="h-4 w-4 text-[#1D1D1F]" />
+                  <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
+                </div>
+              </Link>
+            ) : authorId ? (
               <Link href={`/users/${authorId}`}>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors cursor-pointer">
                   <UserAvatar name={authorName} size="sm" />
@@ -250,37 +406,7 @@ export default function TaskDetail() {
           
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            {/* Like */}
-            <button
-              onClick={() => handleVote(1)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
-              data-testid="button-like"
-            >
-              <ThumbsUp className="h-4 w-4" />
-              <span className="text-sm font-medium">{task.likes || 0}</span>
-            </button>
-            
-            {/* Dislike */}
-            <button
-              onClick={() => handleVote(-1)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
-              data-testid="button-dislike"
-            >
-              <ThumbsDown className="h-4 w-4" />
-              <span className="text-sm font-medium">{task.dislikes || 0}</span>
-            </button>
-            
-            <button
-              onClick={handleFavorite}
-              className={cn(
-                "h-9 w-9 rounded-full flex items-center justify-center transition-colors",
-                isFavorited ? "bg-[#FF6030] text-white" : "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
-              )}
-              data-testid="button-favorite"
-            >
-              <Star className="h-4 w-4" />
-            </button>
-            
+            {/* Лайки и избранное временно отключены */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -303,14 +429,25 @@ export default function TaskDetail() {
             </DropdownMenu>
             
             {user ? (
-              <Button 
-                className="gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl"
-                onClick={handleSubmitSolution}
-                data-testid="button-submit-solution"
-              >
-                <Send className="h-4 w-4" />
-                Отправить решение
-              </Button>
+              isSolutionPending ? (
+                <Button 
+                  className="gap-2 bg-[#325BFF] text-white hover:bg-[#2A4FE6] rounded-xl"
+                  disabled
+                  data-testid="button-solution-pending"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Ответ на проверке
+                </Button>
+              ) : (
+                <Button 
+                  className="gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl"
+                  onClick={handleSubmitSolution}
+                  data-testid="button-submit-solution"
+                >
+                  <Send className="h-4 w-4" />
+                  Отправить решение
+                </Button>
+              )
             ) : (
               <Link href="/auth">
                 <Button 
@@ -380,31 +517,48 @@ export default function TaskDetail() {
         )}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-transparent p-0 h-auto gap-2 mb-6">
-            <TabsTrigger 
-              value="description"
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors data-[state=active]:bg-[#2D2D2D] data-[state=active]:text-white",
-                "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
-              )}
-              data-testid="tab-description"
-            >
-              Описание задачи
-            </TabsTrigger>
-            <TabsTrigger 
-              value="solution"
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-colors data-[state=active]:bg-[#2D2D2D] data-[state=active]:text-white",
-                "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
-              )}
-              data-testid="tab-solution"
-            >
-              Ваше решение
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex items-center gap-2 mb-6 border-b border-border pb-3 overflow-x-auto overflow-y-hidden">
+          <button
+            onClick={() => setActiveTab("description")}
+            className={cn(
+              "px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors relative",
+              activeTab === "description"
+                ? "text-[#1D1D1F]"
+                : "text-muted-foreground hover:text-[#1D1D1F]"
+            )}
+            data-testid="tab-description"
+          >
+            Описание задачи
+            {activeTab === "description" && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-[-13px] left-0 right-0 h-0.5 bg-[#1D1D1F]"
+              />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("solution")}
+            className={cn(
+              "px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors relative",
+              activeTab === "solution"
+                ? "text-[#1D1D1F]"
+                : "text-muted-foreground hover:text-[#1D1D1F]"
+            )}
+            data-testid="tab-solution"
+          >
+            Ваше решение
+            {activeTab === "solution" && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-[-13px] left-0 right-0 h-0.5 bg-[#1D1D1F]"
+              />
+            )}
+          </button>
+        </div>
 
-          <TabsContent value="description" className="mt-0">
+        {/* Tab Content */}
+        {activeTab === "description" && (
+          <div>
             {/* Description Content */}
             <div className="prose prose-sm max-w-none">
               {parseDescription(task.description || "")}
@@ -436,9 +590,11 @@ export default function TaskDetail() {
               </div>
             )}
 
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="solution" className="mt-0">
+        {activeTab === "solution" && (
+          <div className="space-y-6">
             {!user ? (
               <Card className="p-8 text-center bg-white border-0 shadow-sm">
                 <div className="text-muted-foreground mb-4">
@@ -450,6 +606,89 @@ export default function TaskDetail() {
                   </Button>
                 </Link>
               </Card>
+            ) : isSolutionPending ? (
+              <Card className="p-6 bg-white border-0 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#325BFF]" />
+                  <span className="font-medium text-[#1D1D1F]">Ответ на проверке</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Оценка появится в этом блоке после проверки нашей системой
+                </p>
+                {userSolution && (
+                  <div className="mt-4 p-4 bg-[#F9F9F9] rounded-xl">
+                    <p className="text-sm text-[#1D1D1F] whitespace-pre-wrap">
+                      {userSolution.content || userSolution.description}
+                    </p>
+                  </div>
+                )}
+              </Card>
+            ) : userSolution && userSolution.evaluation ? (
+              <>
+                <Card className="p-6 bg-white border-0 shadow-sm">
+                  <div className="flex items-center gap-2 text-[#159931] mb-4">
+                    <Check className="h-5 w-5" />
+                    <span className="font-medium">Ваше решение отправлено</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground mb-4">
+                    {userSolution.content || userSolution.description}
+                  </div>
+                </Card>
+                
+                {/* Секция Результат */}
+                {userSolution.evaluation && (
+                  <Card className="p-6 bg-white border-0 shadow-sm">
+                    <h3 className="text-lg font-semibold text-[#1D1D1F] mb-6">Результат</h3>
+                    
+                    {/* Метрики с прогресс-барами - как в Figma */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      {userSolution.evaluation.metrics?.map((metric: any, index: number) => {
+                        const getGradeColor = (grade: string) => {
+                          switch (grade) {
+                            case "Senior": return { text: "text-[#159931]", bg: "bg-[#159931]" };
+                            case "Middle": return { text: "text-[#FF9232]", bg: "bg-[#FF9232]" };
+                            case "Junior": return { text: "text-[#FF6030]", bg: "bg-[#FF6030]" };
+                            default: return { text: "text-[#666666]", bg: "bg-[#666666]" };
+                          }
+                        };
+                        const colors = getGradeColor(metric.grade);
+                        
+                        return (
+                          <div key={index} className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-[#1D1D1F]">{metric.label}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={cn("text-sm font-semibold", colors.text)}>
+                                  {metric.percentage}%
+                                </span>
+                                <span className={cn("text-xs font-medium px-2 py-0.5 rounded", colors.text, "bg-opacity-10", colors.bg.replace("bg-", "bg-"))}>
+                                  {metric.grade}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-full bg-[#E8E8E8] rounded-full h-2.5 overflow-hidden">
+                              <div
+                                className={cn("h-full rounded-full transition-all", colors.bg)}
+                                style={{ width: `${Math.min(metric.percentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Комментарий системы */}
+                    {userSolution.evaluation.feedback && (
+                      <div className="mt-6 pt-6 border-t border-border">
+                        <h4 className="text-sm font-semibold text-[#1D1D1F] mb-3">Комментарий системы:</h4>
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                          {userSolution.evaluation.feedback}
+                        </p>
+                      </div>
+                    )}
+                  </Card>
+                )}
+              </>
             ) : userSolution ? (
               <Card className="p-6 bg-white border-0 shadow-sm">
                 <div className="flex items-center gap-2 text-[#159931] mb-4">
@@ -457,7 +696,7 @@ export default function TaskDetail() {
                   <span className="font-medium">Ваше решение отправлено</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {userSolution.content}
+                  {userSolution.content || userSolution.description}
                 </div>
               </Card>
             ) : (
@@ -479,18 +718,25 @@ export default function TaskDetail() {
                 </Button>
               </Card>
             )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </motion.div>
 
       {task && (
-        <TaskSubmitModal
-          open={isSubmitModalOpen}
-          onOpenChange={setIsSubmitModalOpen}
-          taskId={task.id}
-          taskTitle={task.title}
-          taskDescription={task.description || ""}
-        />
+        <>
+          <TaskSubmitModal
+            open={isSubmitModalOpen}
+            onOpenChange={setIsSubmitModalOpen}
+            taskId={task.id}
+            taskTitle={task.title}
+            taskDescription={task.description || ""}
+            onSuccess={handleSolutionSubmitted}
+          />
+          <TaskSubmitSuccessModal
+            open={isSuccessModalOpen}
+            onOpenChange={setIsSuccessModalOpen}
+          />
+        </>
       )}
     </MainLayout>
   );

@@ -5,8 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   ArrowLeft, 
   MessageCircle,
-  ThumbsUp,
-  ThumbsDown,
   Upload,
   Check,
   Clock,
@@ -14,6 +12,8 @@ import {
   Send,
   Loader2
 } from "lucide-react";
+import LikeIcon from "@assets/icons/Like.svg";
+import DislikeIcon from "@assets/icons/Dislike.svg";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
-import type { BattleComment } from "@shared/schema";
+import type { BattleComment, Profile } from "@shared/schema";
 
 type BattlePhase = "waiting" | "moderation" | "voting" | "completed";
 
@@ -163,6 +163,18 @@ export default function BattleDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
+  
+  // Get user profile for display name
+  const { data: profile } = useQuery<Profile>({
+    queryKey: ['/api/profiles', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      const response = await fetch(`/api/profiles/${user.id}`);
+      if (!response.ok) throw new Error("Failed to fetch profile");
+      return response.json();
+    },
+  });
   const [selectedVote, setSelectedVote] = useState<"creator" | "opponent" | null>(null);
   const [commentText, setCommentText] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -377,7 +389,7 @@ export default function BattleDetail() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl"
+        className="max-w-4xl mx-auto"
         data-testid="battle-detail-page"
       >
         {/* Back Button */}
@@ -714,7 +726,7 @@ export default function BattleDetail() {
           {/* Comment Input */}
           <div className="flex gap-3 mb-4">
             <UserAvatar 
-              name={user?.firstName || user?.email} 
+              name={profile?.username || profile?.fullName || user?.email} 
               size="md" 
               className="flex-shrink-0" 
             />
@@ -773,20 +785,38 @@ export default function BattleDetail() {
                           onClick={() => handleCommentVote(comment.id, "like")}
                           data-testid={`button-like-comment-${comment.id}`}
                         >
-                          <ThumbsUp className={cn("h-4 w-4", comment.userVote === "like" && "fill-current")} />
+                          <img 
+                            src={LikeIcon} 
+                            alt="Like" 
+                            className="h-4 w-4"
+                            style={{ 
+                              filter: comment.userVote === "like" 
+                                ? 'brightness(0) saturate(100%) invert(47%) sepia(96%) saturate(7498%) hue-rotate(1deg) brightness(101%) contrast(101%)' // #FF6030
+                                : 'brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(95%)' // #979797
+                            }}
+                          />
                           {comment.likes}
                         </button>
                         <button 
                           className={cn(
                             "flex items-center gap-1 text-sm transition-colors",
                             comment.userVote === "dislike" 
-                              ? "text-red-500" 
+                              ? "text-[#FF6030]" 
                               : "text-muted-foreground hover:text-[#1D1D1F]"
                           )}
                           onClick={() => handleCommentVote(comment.id, "dislike")}
                           data-testid={`button-dislike-comment-${comment.id}`}
                         >
-                          <ThumbsDown className={cn("h-4 w-4", comment.userVote === "dislike" && "fill-current")} />
+                          <img 
+                            src={DislikeIcon} 
+                            alt="Dislike" 
+                            className="h-4 w-4"
+                            style={{ 
+                              filter: comment.userVote === "dislike" 
+                                ? 'brightness(0) saturate(100%) invert(47%) sepia(96%) saturate(7498%) hue-rotate(1deg) brightness(101%) contrast(101%)' // #FF6030
+                                : 'brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(95%)' // #979797
+                            }}
+                          />
                           {comment.dislikes}
                         </button>
                       </div>

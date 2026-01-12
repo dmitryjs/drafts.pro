@@ -1,14 +1,12 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "@shared/schema";
+// DATABASE_URL больше не используется - используем Supabase API
+// Этот файл оставлен для совместимости, но db не инициализируется
 
-const { Pool } = pg;
+import { config } from "dotenv";
+import { resolve } from "path";
+// Загружаем .env из корня проекта
+config({ path: resolve(process.cwd(), ".env") });
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+// Заглушка для совместимости - db больше не используется
+// Все операции идут через Supabase API
+export const pool = null;
+export const db = null as any;

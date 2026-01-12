@@ -1,19 +1,18 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  LayoutGrid,
-  Swords,
-  BarChart3,
   Users,
   User,
   Settings,
   LogOut,
   LogIn,
   Plus,
-  Bell,
   ChevronDown,
   Shield
 } from "lucide-react";
+import MenuActivityIcon from "@assets/icons/Menu_Activity.svg";
+import MenuBattleIcon from "@assets/icons/Menu_Battle.svg";
+import MenuNavikiIcon from "@assets/icons/Menu_Naviki.svg";
 import UserAvatar from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +28,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import type { Profile, Notification } from "@shared/schema";
 import { cn } from "@/lib/utils";
-import logoPath from "@assets/Logo_black_1767028620121.png";
+import logoPath from "@assets/Drafts_Black.svg";
+import NotificationsIcon from "@/components/NotificationsIcon";
 import CreateBattleModal from "@/components/modals/CreateBattleModal";
 import CreateTaskModal from "@/components/modals/CreateTaskModal";
 import { format, formatDistanceToNow } from "date-fns";
@@ -52,9 +52,9 @@ interface MainLayoutProps {
 }
 
 const navItems = [
-  { href: "/", icon: LayoutGrid, label: "Задачи" },
-  { href: "/battles", icon: Swords, label: "Батлы" },
-  { href: "/assessment", icon: BarChart3, label: "Оценка навыков" },
+  { href: "/", icon: MenuActivityIcon, label: "Задачи" },
+  { href: "/battles", icon: MenuBattleIcon, label: "Батлы" },
+  { href: "/assessment", icon: MenuNavikiIcon, label: "Оценка навыков" },
 ];
 
 export default function MainLayout({ 
@@ -79,7 +79,16 @@ export default function MainLayout({
   });
 
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
-    queryKey: ['/api/admin/check'],
+    queryKey: ['/api/admin/check', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { isAdmin: false };
+      // Передаем userId в query параметре
+      const response = await fetch(`/api/admin/check?userId=${user.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return { isAdmin: false };
+      return response.json();
+    },
     enabled: !!user?.id,
   });
   
@@ -87,13 +96,29 @@ export default function MainLayout({
 
   // Notifications
   const { data: notificationsList } = useQuery<Notification[]>({
-    queryKey: ['/api/notifications'],
+    queryKey: ['/api/notifications', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const response = await fetch(`/api/notifications?userId=${user.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
     enabled: !!user?.id,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   const { data: unreadCount } = useQuery<{ count: number }>({
-    queryKey: ['/api/notifications/unread-count'],
+    queryKey: ['/api/notifications/unread-count', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { count: 0 };
+      const response = await fetch(`/api/notifications/unread-count?userId=${user.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return { count: 0 };
+      return response.json();
+    },
     enabled: !!user?.id,
     refetchInterval: 30000,
   });
@@ -144,7 +169,6 @@ export default function MainLayout({
           {navItems.map((item) => {
             const isActive = location === item.href || 
               (item.href === "/" && location === "/tasks");
-            const Icon = item.icon;
 
             return (
               <Link key={item.href} href={item.href}>
@@ -157,7 +181,16 @@ export default function MainLayout({
                   )}
                   data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <img 
+                    src={item.icon} 
+                    alt={item.label}
+                    className="h-4 w-4"
+                    style={{ 
+                      filter: isActive 
+                        ? 'brightness(0) saturate(100%) invert(8%) sepia(4%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(95%)' // #141416
+                        : 'brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(95%)' // #979797
+                    }}
+                  />
                   <span>{item.label}</span>
                 </div>
               </Link>
@@ -190,7 +223,14 @@ export default function MainLayout({
                       else setIsTaskModalOpen(true);
                     }}
                   >
-                    <LayoutGrid className="mr-2 h-4 w-4" />
+                    <img 
+                      src={MenuActivityIcon} 
+                      alt="Задача"
+                      className="mr-2 h-4 w-4"
+                      style={{ 
+                        filter: 'brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(95%)' // #979797
+                      }}
+                    />
                     Задача
                   </DropdownMenuItem>
                   <DropdownMenuItem 
@@ -200,7 +240,14 @@ export default function MainLayout({
                       else setIsBattleModalOpen(true);
                     }}
                   >
-                    <Swords className="mr-2 h-4 w-4" />
+                    <img 
+                      src={MenuBattleIcon} 
+                      alt="Батл"
+                      className="mr-2 h-4 w-4"
+                      style={{ 
+                        filter: 'brightness(0) saturate(100%) invert(60%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(95%)' // #979797
+                      }}
+                    />
                     Батл
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -211,10 +258,10 @@ export default function MainLayout({
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    className="text-muted-foreground hover:text-foreground relative"
+                    className="bg-[#E8E8E8] hover:bg-[#D7D7D7] rounded-xl relative"
                     data-testid="button-notifications"
                   >
-                    <Bell className="h-5 w-5" />
+                    <NotificationsIcon className="h-5 w-5" />
                     {unreadCount && unreadCount.count > 0 && (
                       <span className="absolute -top-1 -right-1 bg-[#FF6030] text-white text-[10px] font-medium rounded-full h-4 min-w-4 flex items-center justify-center px-1">
                         {unreadCount.count > 99 ? '99+' : unreadCount.count}
@@ -272,7 +319,7 @@ export default function MainLayout({
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                        <Bell className="h-8 w-8 mb-2 opacity-50" />
+                        <NotificationsIcon className="h-8 w-8 mb-2 opacity-50" />
                         <p className="text-sm">Нет уведомлений</p>
                       </div>
                     )}
@@ -290,7 +337,7 @@ export default function MainLayout({
                   >
                     <UserAvatar 
                       avatarUrl={profile?.avatarUrl} 
-                      name={profile?.username || user?.firstName || user?.email}
+                      name={profile?.username || profile?.fullName || user?.email}
                       size="md"
                     />
                   </Button>

@@ -2,9 +2,6 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ThumbsUp,
-  ThumbsDown,
-  Star, 
   Search,
   ChevronRight,
   ArrowUpDown,
@@ -12,6 +9,16 @@ import {
   X,
   Check
 } from "lucide-react";
+import CategoryIcon3D from "@assets/icons/CategoryIcons_3D.svg";
+import LikeIcon from "@assets/icons/Like.svg";
+import DislikeIcon from "@assets/icons/Dislike.svg";
+import FavoritesIcon from "@assets/icons/Favorites.svg";
+import CategoryIconCases from "@assets/icons/CategoryIcons_Cases.svg";
+import CategoryIconFolder from "@assets/icons/CategoryIcons_Folder.svg";
+import CategoryIconFolderActive from "@assets/icons/CategoryIcons_Folder_Active.svg";
+import CategoryIconGraphic from "@assets/icons/CategoryIcons_Graphic.svg";
+import CategoryIconProducts from "@assets/icons/CategoryIcons_Products.svg";
+import CategoryIconUXUI from "@assets/icons/CategoryIcons_UXUI.svg";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,12 +41,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
 const categories = [
-  { id: "all", label: "Все темы", color: "bg-[#2D2D2D] text-white" },
-  { id: "cases", label: "Кейсы", color: "bg-yellow-400" },
-  { id: "product", label: "Продукты", color: "bg-green-500" },
-  { id: "uxui", label: "UX/UI", color: "bg-purple-500" },
-  { id: "graphic", label: "Графический", color: "bg-pink-500" },
-  { id: "3d", label: "3D", color: "bg-blue-500" },
+  { id: "all", label: "Все темы", icon: CategoryIconFolder, iconActive: CategoryIconFolderActive },
+  { id: "cases", label: "Кейсы", icon: CategoryIconCases },
+  { id: "product", label: "Продукты", icon: CategoryIconProducts },
+  { id: "uxui", label: "UX/UI", icon: CategoryIconUXUI },
+  { id: "graphic", label: "Графический", icon: CategoryIconGraphic },
+  { id: "3d", label: "3D", icon: CategoryIcon3D },
 ];
 
 const getLevelColor = (level: string) => {
@@ -76,11 +83,11 @@ const getCategoryDot = (category: string) => {
 };
 
 const companyTasks = [
-  { id: 1, name: "Яндекс.Еда", count: 156, logo: "https://upload.wikimedia.org/wikipedia/commons/9/9b/Yandex_Eda_logo.svg", bgColor: "bg-yellow-400" },
-  { id: 2, name: "Тинькофф", count: 156, logo: "", bgColor: "bg-yellow-400" },
-  { id: 3, name: "Сбер", count: 156, logo: "", bgColor: "bg-green-500" },
-  { id: 4, name: "Авито", count: 156, logo: "", bgColor: "bg-blue-500" },
-  { id: 5, name: "Google", count: 156, logo: "", bgColor: "bg-white border" },
+  { id: 1, name: "Яндекс.Еда", count: 156, logo: "https://upload.wikimedia.org/wikipedia/commons/9/9b/Yandex_Eda_logo.svg", bgColor: "bg-yellow-400", slug: "yandex-eda" },
+  { id: 2, name: "Тинькофф", count: 156, logo: "", bgColor: "bg-yellow-400", slug: "tinkoff" },
+  { id: 3, name: "Сбер", count: 156, logo: "", bgColor: "bg-green-500", slug: "sber" },
+  { id: 4, name: "Авито", count: 156, logo: "", bgColor: "bg-blue-500", slug: "avito" },
+  { id: 5, name: "Google", count: 156, logo: "", bgColor: "bg-white border", slug: "google" },
 ];
 
 const mockTasks = [
@@ -91,70 +98,123 @@ const mockTasks = [
     category: "product",
     level: "middle",
     author: "Дмитрий Галкин",
+    authorId: 1,
     likes: 324,
     dislikes: 43,
     comments: 43,
     slug: "retention-onboarding",
+    solutionsCount: 12,
+    createdAt: new Date().toISOString(),
   },
   {
     id: 2,
-    title: "Увеличить Retention на онбординге в B2C продукте в несколько строк плюс ещё немного инфы",
-    description: "Необходимо увеличить ретеншен в продукте который работает в сфере B2C",
-    category: "product",
-    level: "middle",
-    author: "Дмитрий Галкин",
-    likes: 324,
-    dislikes: 43,
-    comments: 43,
-    slug: "retention-onboarding-2",
+    title: "Создать дизайн мобильного приложения для доставки еды",
+    description: "Нужен современный и удобный дизайн для iOS и Android приложения",
+    category: "uxui",
+    level: "senior",
+    company: "Яндекс.Еда",
+    companySlug: "yandex-eda",
+    companyId: 1,
+    likes: 456,
+    dislikes: 12,
+    comments: 89,
+    slug: "food-delivery-app-design",
+    solutionsCount: 34,
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
   },
   {
     id: 3,
-    title: "Увеличить Retention на онбординге в B2C продукте",
-    description: "Необходимо увеличить ретеншен в продукте который работает в сфере B2C ФыВЛФЭЫВЛСьФЭЖХЛСЬЭФЫВЫжСвВЛсвПЛпьЫЛпьЫльпЫльпЫльпЛЛД",
-    category: "product",
-    level: "middle",
-    author: "Дмитрий Галкин",
-    likes: 324,
-    dislikes: 43,
-    comments: 43,
-    slug: "retention-onboarding-3",
+    title: "Разработать логотип для финтех стартапа",
+    description: "Требуется минималистичный и запоминающийся логотип",
+    category: "graphic",
+    level: "junior",
+    company: "Тинькофф",
+    companySlug: "tinkoff",
+    companyId: 2,
+    likes: 234,
+    dislikes: 8,
+    comments: 45,
+    slug: "fintech-logo-design",
+    solutionsCount: 18,
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
   },
   {
     id: 4,
-    title: "Увеличить Retention на онбординге в B2C продукте в несколько строк плюс ещё немного инфы",
-    description: "Необходимо увеличить ретеншен в продукте который работает в сфере B2C ФыВЛФЭЫВЛСьФЭЖХЛСЬЭФЫВЫжСвВЛсвПЛпьЫЛпьЫльпЫльпЫльпЛЛД",
-    category: "product",
-    level: "middle",
-    author: "Дмитрий Галкин",
-    likes: 324,
-    dislikes: 43,
-    comments: 43,
-    slug: "retention-onboarding-4",
+    title: "UX исследование для банковского приложения",
+    description: "Провести исследование пользовательского опыта и предложить улучшения",
+    category: "uxui",
+    level: "senior",
+    company: "Сбер",
+    companySlug: "sber",
+    companyId: 3,
+    likes: 567,
+    dislikes: 15,
+    comments: 123,
+    slug: "banking-app-ux-research",
+    solutionsCount: 56,
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
   },
   {
     id: 5,
-    title: "Увеличить Retention на онбординге в B2C продукте",
-    description: "Необходимо увеличить ретеншен в продукте который работает в сфере B2C",
-    category: "product",
+    title: "Создать 3D модель продукта для презентации",
+    description: "Нужна качественная 3D модель для маркетинговых материалов",
+    category: "3d",
     level: "middle",
-    author: "Дмитрий Галкин",
-    likes: 324,
-    dislikes: 43,
-    comments: 43,
-    slug: "retention-onboarding-5",
+    author: "Анна Петрова",
+    authorId: 2,
+    likes: 189,
+    dislikes: 5,
+    comments: 23,
+    slug: "product-3d-model",
+    solutionsCount: 9,
+    createdAt: new Date(Date.now() - 345600000).toISOString(),
   },
   {
     id: 6,
-    title: "Увеличить Retention на онбординге в B2C продукте в несколько строк плюс ещё немного инфы",
-    description: "Необходимо увеличить ретеншен в продукте который работает в сфере B2C ФыВЛФЭЫВЛСьФЭЖХЛСЬЭФЫВЫжСвВЛсвПЛпьЫЛпьЫльпЫльпЫльпЛЛД",
+    title: "Дизайн интерфейса для маркетплейса",
+    description: "Создать удобный и интуитивный интерфейс для онлайн-магазина",
+    category: "uxui",
+    level: "senior",
+    company: "Авито",
+    companySlug: "avito",
+    companyId: 4,
+    likes: 678,
+    dislikes: 22,
+    comments: 156,
+    slug: "marketplace-interface-design",
+    solutionsCount: 78,
+    createdAt: new Date(Date.now() - 432000000).toISOString(),
+  },
+  {
+    id: 7,
+    title: "Кейс: Редизайн корпоративного сайта",
+    description: "Полный редизайн существующего корпоративного сайта с улучшением UX",
+    category: "cases",
+    level: "lead",
+    author: "Иван Сидоров",
+    authorId: 3,
+    likes: 445,
+    dislikes: 18,
+    comments: 67,
+    slug: "corporate-website-redesign",
+    solutionsCount: 23,
+    createdAt: new Date(Date.now() - 518400000).toISOString(),
+  },
+  {
+    id: 8,
+    title: "Создать дизайн-систему для веб-платформы",
+    description: "Разработать комплексную дизайн-систему с компонентами и гайдлайнами",
     category: "product",
-    level: "middle",
-    author: "Дмитрий Галкин",
-    likes: 324,
-    dislikes: 43,
-    comments: 43,
-    slug: "retention-onboarding-6",
+    level: "lead",
+    company: "Google",
+    companySlug: "google",
+    companyId: 5,
+    likes: 789,
+    dislikes: 25,
+    comments: 234,
+    slug: "design-system-web-platform",
+    solutionsCount: 112,
+    createdAt: new Date(Date.now() - 604800000).toISOString(),
   },
 ];
 
@@ -255,21 +315,22 @@ export default function Tasks() {
       <h3 className="text-sm font-medium text-muted-foreground">Задачи от компаний</h3>
       <div className="space-y-2">
         {companyTasks.map((company) => (
-          <div 
-            key={company.id}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-          >
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium",
-              company.bgColor
-            )}>
-              {company.name.charAt(0)}
+          <Link key={company.id} href={`/companies/${company.slug || company.name.toLowerCase().replace(/\s+/g, '-')}`}>
+            <div 
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+            >
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium",
+                company.bgColor
+              )}>
+                {company.name.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{company.name}</p>
+                <p className="text-xs text-muted-foreground">{company.count} задач</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{company.name}</p>
-              <p className="text-xs text-muted-foreground">{company.count} задач</p>
-            </div>
-          </div>
+          </Link>
         ))}
       </div>
       <Button variant="ghost" className="w-full justify-center text-sm text-muted-foreground">
@@ -284,28 +345,38 @@ export default function Tasks() {
       rightPanel={rightPanel}
       onCreateTask={() => setIsCreateModalOpen(true)}
     >
+      <div className="max-w-5xl mx-auto">
       {/* Category Tabs */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-              selectedCategory === cat.id 
-                ? "bg-[#2D2D2D] text-white"
-                : "bg-[#E8E8EE] text-[#1D1D1F] hover:bg-[#DCDCE4]"
-            )}
-            data-testid={`filter-category-${cat.id}`}
-          >
-            <span className="flex items-center gap-1.5">
-              {cat.id !== "all" && selectedCategory !== cat.id && (
-                <span className={cn("w-2 h-2 rounded-full", getCategoryDot(cat.id))} />
+        {categories.map((cat) => {
+          const isActive = selectedCategory === cat.id;
+          const iconSrc = cat.id === "all" && isActive && (cat as any).iconActive 
+            ? (cat as any).iconActive 
+            : cat.icon;
+          
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                isActive 
+                  ? "bg-[#141416] text-white"
+                  : "bg-[#E8E8E8] text-[#1D1D1F] hover:bg-[#DCDCE4]"
               )}
-              {cat.label}
-            </span>
-          </button>
-        ))}
+              data-testid={`filter-category-${cat.id}`}
+            >
+              <span className="flex items-center gap-1.5">
+                <img 
+                  src={iconSrc} 
+                  alt={cat.label} 
+                  className="w-5 h-5" 
+                />
+                {cat.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Search Bar - Full Width with Sort/Filter */}
@@ -406,42 +477,13 @@ export default function Tasks() {
                     {task.description}
                   </p>
                   
-                  {/* Interactive Action Buttons - Like/Dislike and Favorite */}
-                  <div className="flex items-center gap-2 flex-shrink-0 mt-auto">
-                    {/* Like */}
-                    <button
-                      onClick={(e) => handleVote(e, task.id, 1)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
-                      data-testid={`button-like-${task.id}`}
-                    >
-                      <ThumbsUp className="h-4 w-4" />
-                      <span className="text-sm font-medium">{task.likes || 0}</span>
-                    </button>
-                    
-                    {/* Dislike */}
-                    <button
-                      onClick={(e) => handleVote(e, task.id, -1)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8E8EE] text-[#1D1D1F] border border-border hover:bg-[#DCDCE4] transition-colors"
-                      data-testid={`button-dislike-${task.id}`}
-                    >
-                      <ThumbsDown className="h-4 w-4" />
-                      <span className="text-sm font-medium">{task.dislikes || 0}</span>
-                    </button>
-                    
-                    {/* Favorite */}
-                    <button
-                      onClick={(e) => handleFavorite(e, task.id)}
-                      className="ml-auto h-8 w-8 rounded-lg flex items-center justify-center bg-[#E8E8EE] border border-border hover:bg-[#DCDCE4] transition-colors"
-                      data-testid={`button-favorite-${task.id}`}
-                    >
-                      <Star className="h-4 w-4 text-[#1D1D1F]" />
-                    </button>
-                  </div>
+                  {/* Interactive Action Buttons - Like/Dislike and Favorite - ВРЕМЕННО ОТКЛЮЧЕНО */}
                 </Card>
               </Link>
             </motion.div>
           ))
         )}
+      </div>
       </div>
 
       <CreateTaskModal 

@@ -119,9 +119,28 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("tasks");
 
-  const { data: profileData } = useQuery<ProfileType>({
+  // Get profile by authUid (Supabase user.id)
+  const { data: profileData, isLoading: isLoadingProfile } = useQuery<ProfileType>({
     queryKey: ["/api/profiles", user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      try {
+        const response = await apiRequest("GET", `/api/profiles/${user.id}`);
+        return response.json();
+      } catch (error: any) {
+        // If profile doesn't exist, create it
+        if (error.message?.includes("404")) {
+          const createResponse = await apiRequest("POST", "/api/profiles/upsert", {
+            authUid: user.id,
+            email: user.email || "",
+          });
+          return createResponse.json();
+        }
+        throw error;
+      }
+    },
     enabled: !!user?.id,
+    retry: false,
   });
 
   useEffect(() => {
@@ -144,16 +163,25 @@ export default function Profile() {
 
   const saveProfileMutation = useMutation({
     mutationFn: async (data: Partial<ProfileType>) => {
-      if (!profileData?.id) throw new Error("Profile not loaded");
-      return apiRequest("PATCH", `/api/profiles/${profileData.id}`, data);
+      if (!profileData?.id) {
+        throw new Error("Профиль не загружен. Попробуйте обновить страницу.");
+      }
+      const response = await apiRequest("PATCH", `/api/profiles/${profileData.id}`, data);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
       toast({ title: "Профиль сохранён!" });
       setIsEditModalOpen(false);
     },
-    onError: () => {
-      toast({ title: "Ошибка при сохранении", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Profile save error:", error);
+      const errorMessage = error.message || "Ошибка при сохранении профиля";
+      toast({ 
+        title: "Ошибка при сохранении", 
+        description: errorMessage,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -192,7 +220,7 @@ export default function Profile() {
     }
   };
 
-  const displayName = editFullName || user?.firstName || "Ваше имя";
+  const displayName = editFullName || profileData?.fullName || profileData?.username || "Ваше имя";
   const displayBio = editBio || "Ваша роль";
   const hasLocation = editCountry || editCity;
   const hasInfo = editCompany || editGrade || hasLocation;

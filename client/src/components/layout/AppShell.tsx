@@ -43,8 +43,8 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
     enabled: !!user?.id,
   });
 
-  // Use profile avatar or fallback to auth user avatar
-  const avatarUrl = profile?.avatarUrl || user?.profileImageUrl || undefined;
+  // Use profile avatar
+  const avatarUrl = profile?.avatarUrl || undefined;
 
   const navItems = [
     { href: "/", icon: Home, label: "Главная" },
@@ -79,7 +79,7 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
                 <Button variant="ghost" size="icon" className="rounded-full ring-2 ring-transparent hover:ring-primary/20 transition-all">
                   <UserAvatar 
                     avatarUrl={avatarUrl} 
-                    name={user?.firstName || user?.email}
+                    name={profile?.username || profile?.fullName || user?.email}
                     size="md"
                   />
                 </Button>
@@ -88,7 +88,7 @@ export default function AppShell({ children, hideNav = false }: AppShellProps) {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user?.firstName || "Пользователь"}
+                      {profile?.username || profile?.fullName || "Пользователь"}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}

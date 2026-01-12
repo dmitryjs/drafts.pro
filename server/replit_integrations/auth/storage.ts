@@ -1,5 +1,7 @@
 import { authUsers, type AuthUser, type UpsertAuthUser } from "@shared/models/auth";
 import { profiles } from "@shared/schema";
+// db больше не используется - используем Supabase API
+// Для Replit Auth это не критично, так как он отключен в локальной разработке
 import { db } from "../../db";
 import { eq, and, isNull, sql, count } from "drizzle-orm";
 

@@ -6,14 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { useAuth } from "@/hooks/use-auth";
-import authBgImage from "@assets/BGauth_1767278053848.png";
+import { useAuth as useSupabaseAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import authBgImage from "@assets/Авторизация баннер.png";
 import taglineImage from "@assets/tagline_text.png";
 import draftsLogoWhite from "@assets/draftslogo_1767278269094.png";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, signInWithOtp, verifyOtp, isConfigured } = useSupabaseAuth();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,36 +22,90 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user) {
       setLocation("/");
     }
-  }, [isAuthenticated, setLocation]);
+  }, [user, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
-      setError("Заполните все поля");
+    if (!email) {
+      setError("Введите email");
       return;
     }
 
-    if (!isLoginMode && password !== confirmPassword) {
-      setError("Пароли не совпадают");
+    if (!isConfigured || !supabase) {
+      setError("Supabase не настроен. Проверьте переменные окружения.");
       return;
     }
 
     setIsSubmitting(true);
-    
-    // For now, redirect to Replit Auth as fallback
-    // In future, implement custom email/password auth
-    window.location.href = "/api/login";
+
+    try {
+      if (!otpSent) {
+        // Отправляем OTP код на email
+        const { error } = await signInWithOtp(email);
+        if (error) {
+          setError(error.message || "Ошибка отправки кода");
+          setIsSubmitting(false);
+          return;
+        }
+        setOtpSent(true);
+        setError("");
+      } else {
+        // Проверяем OTP код
+        const { error } = await verifyOtp(email, otpCode);
+        if (error) {
+          setError(error.message || "Неверный код");
+          setIsSubmitting(false);
+          return;
+        }
+        // Успешная авторизация - редирект произойдет автоматически через useEffect
+      }
+    } catch (err: any) {
+      setError(err.message || "Произошла ошибка");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = "/api/login";
+  const handleGoogleLogin = async () => {
+    if (!supabase) {
+      setError("Supabase не настроен");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      
+      if (error) {
+        setError(error.message || "Ошибка входа через Google");
+        setIsSubmitting(false);
+      }
+      // Если успешно - редирект произойдет автоматически
+      // Не нужно setIsSubmitting(false) здесь, так как произойдет редирект
+    } catch (err: any) {
+      setError(err.message || "Ошибка входа через Google");
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -144,55 +199,33 @@ export default function Auth() {
                     placeholder="email@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={otpSent}
                     className="pl-10 rounded-xl"
                     data-testid="input-email"
                   />
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="password" className="text-sm font-medium">
-                  Пароль
-                </Label>
-                <div className="relative mt-1.5">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 rounded-xl"
-                    data-testid="input-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    data-testid="button-toggle-password"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {!isLoginMode && (
+              {otpSent && (
                 <div>
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                    Подтвердите пароль
+                  <Label htmlFor="otp" className="text-sm font-medium">
+                    Код подтверждения
                   </Label>
                   <div className="relative mt-1.5">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="confirmPassword"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-10 rounded-xl"
-                      data-testid="input-confirm-password"
+                      id="otp"
+                      type="text"
+                      placeholder="Введите код из email"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      className="rounded-xl"
+                      data-testid="input-otp"
+                      autoFocus
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Код отправлен на {email}
+                  </p>
                 </div>
               )}
 
@@ -202,17 +235,33 @@ export default function Auth() {
 
               <Button 
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (otpSent && !otpCode)}
                 className="w-full h-12 bg-[#2D2D2D] hover:bg-[#3D3D3D] text-white font-medium rounded-xl"
                 data-testid="button-submit"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : otpSent ? (
+                  "Подтвердить"
                 ) : (
-                  isLoginMode ? "Войти" : "Создать аккаунт"
+                  "Отправить код"
                 )}
               </Button>
             </form>
+
+            {otpSent && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setOtpSent(false);
+                  setOtpCode("");
+                  setError("");
+                }}
+                className="w-full mt-2 text-sm"
+              >
+                Изменить email
+              </Button>
+            )}
 
             {/* Divider */}
             <div className="relative my-6">
@@ -235,21 +284,6 @@ export default function Auth() {
               Войти через Google
             </Button>
 
-            {/* Toggle Login/Register */}
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              {isLoginMode ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLoginMode(!isLoginMode);
-                  setError("");
-                }}
-                className="text-[#FF6030] hover:underline font-medium"
-                data-testid="button-toggle-mode"
-              >
-                {isLoginMode ? "Зарегистрироваться" : "Войти"}
-              </button>
-            </p>
           </motion.div>
         </div>
       </div>

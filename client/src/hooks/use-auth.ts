@@ -1,40 +1,21 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AuthUser } from "@shared/models/auth";
-
-async function fetchUser(): Promise<AuthUser | null> {
-  const response = await fetch("/api/auth/user", {
-    credentials: "include",
-  });
-
-  if (response.status === 401) {
-    return null;
-  }
-
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
-}
+// Adapter for backward compatibility with old useAuth hook
+// Maps Supabase AuthContext to old API format
+import { useAuth as useSupabaseAuth } from "@/contexts/AuthContext";
 
 export function useAuth() {
-  const queryClient = useQueryClient();
-  const { data: user, isLoading } = useQuery<AuthUser | null>({
-    queryKey: ["/api/auth/user"],
-    queryFn: fetchUser,
-    retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  const logout = () => {
-    queryClient.setQueryData(["/api/auth/user"], null);
-    window.location.href = "/api/logout";
-  };
+  const { user, isLoading, signOut } = useSupabaseAuth();
 
   return {
-    user,
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      // Map Supabase user to old format
+    } : null,
     isLoading,
     isAuthenticated: !!user,
-    logout,
+    logout: async () => {
+      await signOut();
+      window.location.href = "/";
+    },
   };
 }

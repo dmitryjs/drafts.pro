@@ -8,14 +8,14 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !user) {
       setLocation('/auth');
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [user, isLoading, setLocation]);
 
   if (isLoading || !user) {
     return (

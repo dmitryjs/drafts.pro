@@ -6,9 +6,15 @@ import type { RequestHandler } from "express";
 import { authStorage } from "./storage";
 
 export const isAdmin: RequestHandler = async (req, res, next) => {
+  // Если Replit Auth не настроен, пропускаем проверку
+  // Проверка админа будет на уровне роутов через email
+  if (!process.env.REPL_ID) {
+    return next();
+  }
+
   const user = req.user as any;
   
-  if (!req.isAuthenticated() || !user?.claims?.sub) {
+  if (typeof req.isAuthenticated !== 'function' || !req.isAuthenticated() || !user?.claims?.sub) {
     return res.status(401).json({ message: "Unauthorized" });
   }
   

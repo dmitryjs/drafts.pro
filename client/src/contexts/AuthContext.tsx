@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Проверяем текущую сессию
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -47,8 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
+    // Обрабатываем изменения состояния авторизации (включая OAuth callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -56,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
         }
+        setIsLoading(false);
       }
     );
 
@@ -66,12 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await apiRequest('POST', '/api/profiles/upsert', {
         authUid: user.id,
-        email: user.email,
+        email: user.email || '',
       });
       const profileData = await response.json();
       setProfile(profileData);
     } catch (error) {
       console.error('Error fetching/creating profile:', error);
+      // Не устанавливаем profile в null при ошибке, чтобы не сломать UI
     }
   }
 

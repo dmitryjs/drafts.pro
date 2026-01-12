@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider } from "@/contexts/AuthContext";
 import NotFound from "@/pages/not-found";
 
 import Tasks from "@/pages/Tasks";
@@ -14,6 +15,7 @@ import BattleDetail from "@/pages/BattleDetail";
 import Assessment from "@/pages/Assessment";
 import Profile from "@/pages/Profile";
 import UserProfile from "@/pages/UserProfile";
+import CompanyProfile from "@/pages/CompanyProfile";
 import Drafts from "@/pages/Drafts";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
@@ -28,6 +30,7 @@ function Router() {
       <Route path="/battles" component={Battles} />
       <Route path="/battles/:slug" component={BattleDetail} />
       <Route path="/users/:id" component={UserProfile} />
+      <Route path="/companies/:slug" component={CompanyProfile} />
       <Route path="/assessment" component={Assessment} />
       <Route path="/profile">
         <ProtectedRoute>
@@ -53,10 +56,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router />
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

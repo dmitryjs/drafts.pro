@@ -595,4 +595,9 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Используем Supabase API вместо прямого подключения к Postgres
+import { SupabaseStorage } from "./storage_supabase";
+
+// Для MVP используем Supabase API
+// Если нужны все функции - можно переключить обратно на DatabaseStorage
+export const storage = new SupabaseStorage();
