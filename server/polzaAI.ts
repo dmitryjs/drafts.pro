@@ -304,6 +304,11 @@ ${incorrectTopics.length > 0 ? `Темы, в которых были ошибк�
 export interface TaskSolutionEvaluation {
   isCorrect: boolean;
   feedback: string;
+  metrics?: {
+    label: string;
+    percentage: number;
+    grade: string;
+  }[];
 }
 
 export async function evaluateTaskSolution(
@@ -330,9 +335,32 @@ ${userAnswer}
 Ответь в формате JSON:
 {
   "isCorrect": <true/false>,
-  "feedback": "<развёрнутая обратная связь 2-4 предложения>"
+  "feedback": "<развёрнутая обратная связь 2-4 предложения>",
+  "metrics": [
+    {
+      "label": "Понимание задачи",
+      "percentage": <число от 0 до 100>,
+      "grade": "<Junior/Middle/Senior>"
+    },
+    {
+      "label": "Качество решения",
+      "percentage": <число от 0 до 100>,
+      "grade": "<Junior/Middle/Senior>"
+    },
+    {
+      "label": "Структурированность",
+      "percentage": <число от 0 до 100>,
+      "grade": "<Junior/Middle/Senior>"
+    },
+    {
+      "label": "Практическая применимость",
+      "percentage": <число от 0 до 100>,
+      "grade": "<Junior/Middle/Senior>"
+    }
+  ]
 }
 
+Оцени каждую метрику по шкале от 0 до 100 и определи уровень (Junior: 0-50, Middle: 51-80, Senior: 81-100).
 Отвечай только JSON, без дополнительного текста.`;
 
   try {
@@ -355,6 +383,28 @@ ${userAnswer}
       return {
         isCorrect: parsed.isCorrect === true,
         feedback: parsed.feedback || "Не удалось сгенерировать обратную связь.",
+        metrics: parsed.metrics || [
+          {
+            label: "Понимание задачи",
+            percentage: parsed.isCorrect ? 75 : 40,
+            grade: parsed.isCorrect ? "Middle" : "Junior",
+          },
+          {
+            label: "Качество решения",
+            percentage: parsed.isCorrect ? 70 : 45,
+            grade: parsed.isCorrect ? "Middle" : "Junior",
+          },
+          {
+            label: "Структурированность",
+            percentage: parsed.isCorrect ? 65 : 35,
+            grade: parsed.isCorrect ? "Middle" : "Junior",
+          },
+          {
+            label: "Практическая применимость",
+            percentage: parsed.isCorrect ? 72 : 42,
+            grade: parsed.isCorrect ? "Middle" : "Junior",
+          },
+        ],
       };
     }
   } catch (error) {

@@ -401,7 +401,7 @@ export default function BattleDetail() {
         </Link>
 
         {/* Phase Progress */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2" data-testid="phase-progress">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0" data-testid="phase-progress">
           {phases.map((p, index) => {
             const isActive = p === phase;
             const isPassed = index < currentPhaseIndex;
@@ -410,7 +410,7 @@ export default function BattleDetail() {
               <Badge
                 key={p}
                 className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-1",
+                  "px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium whitespace-nowrap flex items-center gap-1 flex-shrink-0",
                   isActive
                     ? "bg-[#2D2D2D] text-white"
                     : isPassed
@@ -421,14 +421,15 @@ export default function BattleDetail() {
               >
                 {isPassed && <Check className="h-3 w-3" />}
                 <span className="mr-1">{index + 1}</span>
-                {phaseLabels[p]}
+                <span className="hidden sm:inline">{phaseLabels[p]}</span>
+                <span className="sm:hidden">{phaseLabels[p].split(' ')[0]}</span>
               </Badge>
             );
           })}
         </div>
 
         {/* Two Column Layout for Participants */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
           {/* Creator Side */}
           <div data-testid="creator-section">
             {/* Author with avatar ABOVE image */}
@@ -453,10 +454,10 @@ export default function BattleDetail() {
             </div>
 
             {/* Title and category BELOW image */}
-            <h2 className="text-lg font-bold text-[#1D1D1F] mb-1 flex items-center gap-2" data-testid="text-creator-name">
-              {battle.creator.name}
+            <h2 className="text-base md:text-lg font-bold text-[#1D1D1F] mb-1 flex items-center gap-2 flex-wrap" data-testid="text-creator-name">
+              <span className="break-words">{battle.creator.name}</span>
               {creatorWon && (
-                <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
+                <Badge className="bg-amber-100 text-amber-700 text-xs" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
               )}
             </h2>
           </div>
@@ -487,10 +488,10 @@ export default function BattleDetail() {
                 </div>
 
                 {/* Title BELOW image */}
-                <h2 className="text-lg font-bold text-[#1D1D1F] mb-1 flex items-center gap-2" data-testid="text-opponent-name">
-                  {battle.opponent.name}
+                <h2 className="text-base md:text-lg font-bold text-[#1D1D1F] mb-1 flex items-center gap-2 flex-wrap" data-testid="text-opponent-name">
+                  <span className="break-words">{battle.opponent.name}</span>
                   {opponentWon && (
-                    <Badge className="bg-amber-100 text-amber-700" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
+                    <Badge className="bg-amber-100 text-amber-700 text-xs" data-testid="badge-winner-xp">+{battle.xpReward}XP</Badge>
                   )}
                 </h2>
               </>
@@ -559,9 +560,9 @@ export default function BattleDetail() {
         </div>
 
         {/* Battle Title, Category and Description */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#1D1D1F] mb-2" data-testid="text-battle-title">{battle.title}</h1>
-          <Badge className="bg-[#E8E8EE] text-[#1D1D1F] mb-3" data-testid="badge-category">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-xl md:text-2xl font-bold text-[#1D1D1F] mb-2" data-testid="text-battle-title">{battle.title}</h1>
+          <Badge className="bg-[#E8E8EE] text-[#1D1D1F] mb-3 text-xs" data-testid="badge-category">
             {battle.category}
           </Badge>
           <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-battle-description">
@@ -571,12 +572,12 @@ export default function BattleDetail() {
 
         {/* Moderation Notice */}
         {phase === "moderation" && (
-          <Card className="p-6 mb-8 bg-amber-50 border-amber-200" data-testid="card-moderation-notice">
+          <Card className="p-4 md:p-6 mb-6 md:mb-8 bg-amber-50 border-amber-200" data-testid="card-moderation-notice">
             <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-5 w-5 text-amber-600" />
-              <span className="font-semibold text-amber-800">На модерации</span>
+              <Clock className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
+              <span className="font-semibold text-sm md:text-base text-amber-800">На модерации</span>
             </div>
-            <p className="text-sm text-amber-700">
+            <p className="text-xs md:text-sm text-amber-700">
               Ваш батл проходит проверку модераторами. После одобрения начнётся голосование длительностью 24 часа.
             </p>
           </Card>
@@ -584,21 +585,21 @@ export default function BattleDetail() {
 
         {/* Voting Section */}
         {phase === "voting" && (
-          <Card className="p-6 mb-8 bg-white border-0 shadow-sm" data-testid="card-voting-section">
+          <Card className="p-4 md:p-6 mb-6 md:mb-8 bg-white border-0 shadow-sm" data-testid="card-voting-section">
             <div className="flex items-center gap-2 mb-4">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <span className="font-semibold text-[#1D1D1F]">Голосование</span>
+              <Clock className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+              <span className="font-semibold text-sm md:text-base text-[#1D1D1F]">Голосование</span>
             </div>
             
-            <p className="text-sm text-muted-foreground mb-2">Оставшееся время (24 часа):</p>
-            <p className="text-2xl font-bold text-[#1D1D1F] mb-6" data-testid="text-time-remaining">{timeRemaining}</p>
+            <p className="text-xs md:text-sm text-muted-foreground mb-2">Оставшееся время (24 часа):</p>
+            <p className="text-xl md:text-2xl font-bold text-[#1D1D1F] mb-4 md:mb-6" data-testid="text-time-remaining">{timeRemaining}</p>
             
             {/* Vote Options */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mb-4 md:mb-6">
               <button
                 onClick={() => setSelectedVote("creator")}
                 className={cn(
-                  "w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-colors",
+                  "w-full p-3 md:p-4 rounded-xl border-2 flex items-center gap-3 md:gap-4 transition-colors",
                   selectedVote === "creator" 
                     ? "border-[#2D2D2D] bg-[#F9F9F9]" 
                     : "border-border hover:border-muted-foreground"
@@ -608,14 +609,14 @@ export default function BattleDetail() {
                 <img 
                   src={battle.creator.image} 
                   alt={battle.creator.name}
-                  className="w-12 h-12 rounded-lg object-cover"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover flex-shrink-0"
                 />
-                <div className="flex-1 text-left">
-                  <p className="font-medium text-[#1D1D1F]">{battle.creator.name}</p>
-                  <p className="text-sm text-muted-foreground">{battle.creator.owner}</p>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="font-medium text-sm md:text-base text-[#1D1D1F] truncate">{battle.creator.name}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground truncate">{battle.creator.owner}</p>
                 </div>
                 {selectedVote === "creator" && (
-                  <Check className="h-5 w-5 text-[#1D1D1F]" />
+                  <Check className="h-4 w-4 md:h-5 md:w-5 text-[#1D1D1F] flex-shrink-0" />
                 )}
               </button>
               
@@ -623,7 +624,7 @@ export default function BattleDetail() {
                 <button
                   onClick={() => setSelectedVote("opponent")}
                   className={cn(
-                    "w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-colors",
+                    "w-full p-3 md:p-4 rounded-xl border-2 flex items-center gap-3 md:gap-4 transition-colors",
                     selectedVote === "opponent" 
                       ? "border-[#2D2D2D] bg-[#F9F9F9]" 
                       : "border-border hover:border-muted-foreground"
@@ -633,14 +634,14 @@ export default function BattleDetail() {
                   <img 
                     src={battle.opponent.image} 
                     alt={battle.opponent.name}
-                    className="w-12 h-12 rounded-lg object-cover"
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover flex-shrink-0"
                   />
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-[#1D1D1F]">{battle.opponent.name}</p>
-                    <p className="text-sm text-muted-foreground">{battle.opponent.owner}</p>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-medium text-sm md:text-base text-[#1D1D1F] truncate">{battle.opponent.name}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground truncate">{battle.opponent.owner}</p>
                   </div>
                   {selectedVote === "opponent" && (
-                    <Check className="h-5 w-5 text-[#1D1D1F]" />
+                    <Check className="h-4 w-4 md:h-5 md:w-5 text-[#1D1D1F] flex-shrink-0" />
                   )}
                 </button>
               )}
@@ -716,26 +717,26 @@ export default function BattleDetail() {
         )}
 
         {/* Comments Section */}
-        <Card className="p-6 bg-white border-0 shadow-sm" data-testid="card-comments">
+        <Card className="p-4 md:p-6 bg-white border-0 shadow-sm" data-testid="card-comments">
           <div className="flex items-center gap-2 mb-4">
-            <MessageCircle className="h-5 w-5 text-muted-foreground" />
-            <span className="font-semibold text-[#1D1D1F]">Комментарии</span>
-            <span className="text-sm text-muted-foreground">({comments.length})</span>
+            <MessageCircle className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+            <span className="font-semibold text-sm md:text-base text-[#1D1D1F]">Комментарии</span>
+            <span className="text-xs md:text-sm text-muted-foreground">({comments.length})</span>
           </div>
           
           {/* Comment Input */}
-          <div className="flex gap-3 mb-4">
+          <div className="flex gap-2 md:gap-3 mb-4">
             <UserAvatar 
               name={profile?.username || profile?.fullName || user?.email} 
-              size="md" 
-              className="flex-shrink-0" 
+              size="sm"
+              className="flex-shrink-0 hidden sm:block" 
             />
             <div className="flex-1">
               <Textarea
                 placeholder="Что вы думаете об этом батле?"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                className="mb-2 rounded-xl resize-none min-h-[80px]"
+                className="mb-2 rounded-xl resize-none min-h-[70px] md:min-h-[80px] text-sm"
                 disabled={phase === "waiting" || phase === "moderation"}
                 data-testid="input-comment"
               />
@@ -763,18 +764,18 @@ export default function BattleDetail() {
           
           {/* Comments List */}
           {(phase === "voting" || phase === "completed") && (
-            <div className="space-y-4" data-testid="comments-list">
+            <div className="space-y-3 md:space-y-4" data-testid="comments-list">
               {comments.map((comment) => (
-                <div key={comment.id} className="border-t pt-4" data-testid={`comment-${comment.id}`}>
-                  <div className="flex items-start gap-3">
-                    <UserAvatar name={comment.author} size="md" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm text-[#1D1D1F]">{comment.author}</span>
-                        <span className="text-xs text-muted-foreground">{comment.createdAt}</span>
+                <div key={comment.id} className="border-t pt-3 md:pt-4" data-testid={`comment-${comment.id}`}>
+                  <div className="flex items-start gap-2 md:gap-3">
+                    <UserAvatar name={comment.author} size="sm" className="flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-medium text-xs md:text-sm text-[#1D1D1F] truncate">{comment.author}</span>
+                        <span className="text-[10px] md:text-xs text-muted-foreground">{comment.createdAt}</span>
                       </div>
-                      <p className="text-sm text-[#1D1D1F] mb-2">{comment.content}</p>
-                      <div className="flex items-center gap-4">
+                      <p className="text-xs md:text-sm text-[#1D1D1F] mb-2 break-words">{comment.content}</p>
+                      <div className="flex items-center gap-3 md:gap-4">
                         <button 
                           className={cn(
                             "flex items-center gap-1 text-sm transition-colors",

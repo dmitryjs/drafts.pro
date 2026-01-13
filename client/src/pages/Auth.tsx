@@ -117,8 +117,8 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-5">
-      <div className="h-[calc(100vh-40px)] flex">
+    <div className="min-h-screen bg-white p-4 sm:p-5">
+      <div className="h-[calc(100vh-32px)] sm:h-[calc(100vh-40px)] flex">
         {/* Left Side - Gradient Hero */}
         <div 
           className="hidden lg:flex lg:w-1/2 relative overflow-hidden rounded-3xl"
@@ -149,7 +149,7 @@ export default function Auth() {
         </div>
 
         {/* Right Side - Auth Form */}
-        <div className="flex-1 flex items-center justify-center bg-white">
+        <div className="flex-1 flex items-center justify-center bg-white px-2 sm:px-0">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -159,7 +159,7 @@ export default function Auth() {
             {/* Back Button */}
             <Button
               variant="secondary"
-              className="mb-6 gap-2 bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#1D1D1F] rounded-xl"
+              className="mb-4 sm:mb-6 gap-2 bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#1D1D1F] rounded-xl text-sm"
               onClick={() => window.history.back()}
               data-testid="button-back"
             >
@@ -168,17 +168,17 @@ export default function Auth() {
             </Button>
 
             {/* Mobile Logo */}
-            <div className="lg:hidden flex items-center gap-2 mb-8">
+            <div className="lg:hidden flex items-center gap-2 mb-6 sm:mb-8">
               <div className="w-8 h-8 bg-[#1D1D1F] rounded-md flex items-center justify-center">
                 <span className="text-white font-bold text-sm">/</span>
               </div>
               <span className="text-xl font-bold tracking-tight text-[#1D1D1F]">DRAFTS</span>
             </div>
 
-            <h2 className="text-2xl font-bold text-[#1D1D1F] mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#1D1D1F] mb-2">
               {isLoginMode ? "Добро пожаловать" : "Создать аккаунт"}
             </h2>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
               {isLoginMode 
                 ? "Войдите чтобы получить доступ ко всем возможностям платформы"
                 : "Зарегистрируйтесь чтобы начать развиваться как дизайнер"
@@ -186,9 +186,9 @@ export default function Auth() {
             </p>
 
             {/* Auth Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               <div>
-                <Label htmlFor="email" className="text-sm font-medium">
+                <Label htmlFor="email" className="text-xs sm:text-sm font-medium">
                   Email
                 </Label>
                 <div className="relative mt-1.5">
@@ -200,7 +200,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={otpSent}
-                    className="pl-10 rounded-xl"
+                    className="pl-10 rounded-xl h-10 sm:h-11 text-sm"
                     data-testid="input-email"
                   />
                 </div>
@@ -208,7 +208,7 @@ export default function Auth() {
 
               {otpSent && (
                 <div>
-                  <Label htmlFor="otp" className="text-sm font-medium">
+                  <Label htmlFor="otp" className="text-xs sm:text-sm font-medium">
                     Код подтверждения
                   </Label>
                   <div className="relative mt-1.5">
@@ -218,7 +218,7 @@ export default function Auth() {
                       placeholder="Введите код из email"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
-                      className="rounded-xl"
+                      className="rounded-xl h-10 sm:h-11 text-sm"
                       data-testid="input-otp"
                       autoFocus
                     />
@@ -230,13 +230,13 @@ export default function Auth() {
               )}
 
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-xs sm:text-sm text-destructive">{error}</p>
               )}
 
               <Button 
                 type="submit"
                 disabled={isSubmitting || (otpSent && !otpCode)}
-                className="w-full h-12 bg-[#2D2D2D] hover:bg-[#3D3D3D] text-white font-medium rounded-xl"
+                className="w-full h-11 sm:h-12 bg-[#2D2D2D] hover:bg-[#3D3D3D] text-white font-medium rounded-xl text-sm sm:text-base"
                 data-testid="button-submit"
               >
                 {isSubmitting ? (
@@ -277,10 +277,10 @@ export default function Auth() {
             <Button 
               variant="outline"
               onClick={handleGoogleLogin}
-              className="w-full h-12 rounded-xl gap-3"
+              className="w-full h-11 sm:h-12 rounded-xl gap-3 text-sm sm:text-base"
               data-testid="button-google-login"
             >
-              <SiGoogle className="h-5 w-5" />
+              <SiGoogle className="h-4 w-4 sm:h-5 sm:w-5" />
               Войти через Google
             </Button>
 

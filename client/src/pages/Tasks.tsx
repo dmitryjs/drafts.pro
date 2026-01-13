@@ -345,9 +345,9 @@ export default function Tasks() {
       rightPanel={rightPanel}
       onCreateTask={() => setIsCreateModalOpen(true)}
     >
-      <div className="max-w-5xl mx-auto">
+      <div className="w-full max-w-full lg:max-w-5xl lg:mx-auto">
       {/* Category Tabs */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide lg:flex-wrap lg:overflow-visible lg:pb-0 -mx-[15px] px-[15px] lg:mx-0 lg:px-0">
         {categories.map((cat) => {
           const isActive = selectedCategory === cat.id;
           const iconSrc = cat.id === "all" && isActive && (cat as any).iconActive 
@@ -359,83 +359,81 @@ export default function Tasks() {
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                "h-11 lg:h-auto lg:px-4 lg:py-2 px-4 py-3 rounded-full text-sm lg:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-2",
                 isActive 
                   ? "bg-[#141416] text-white"
                   : "bg-[#E8E8E8] text-[#1D1D1F] hover:bg-[#DCDCE4]"
               )}
               data-testid={`filter-category-${cat.id}`}
             >
-              <span className="flex items-center gap-1.5">
-                <img 
-                  src={iconSrc} 
-                  alt={cat.label} 
-                  className="w-5 h-5" 
-                />
-                {cat.label}
-              </span>
+              <img 
+                src={iconSrc} 
+                alt={cat.label} 
+                className="w-5 h-5 lg:w-5 lg:h-5" 
+              />
+              <span>{cat.label}</span>
             </button>
           );
         })}
       </div>
 
       {/* Search Bar - Full Width with Sort/Filter */}
-      <div className="flex items-center gap-2 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <div className="mb-6 -mx-[15px] px-[15px] lg:mx-0 lg:px-0">
+        <div className="relative flex items-center lg:gap-2">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
           <Input
             placeholder="Поиск задач"
-            className="pl-12 h-11 bg-white border-border rounded-xl w-full"
-            style={{ height: '44px' }}
+            className="pl-12 pr-[88px] lg:pr-4 h-[50px] lg:h-11 bg-white border-border rounded-[12px] lg:rounded-xl w-full text-sm lg:text-base max-w-full"
             data-testid="input-search-tasks"
           />
-        </div>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <div className="absolute right-[12px] top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="w-10 h-10 lg:w-11 lg:h-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors flex-shrink-0"
+                  data-testid="button-sort"
+                >
+                  <ArrowUpDown className="h-5 w-5 lg:h-5 lg:w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.id}
+                    onClick={() => setSortBy(option.id)}
+                    className="cursor-pointer"
+                  >
+                    <span className="flex-1">{option.label}</span>
+                    {sortBy === option.id && <Check className="h-4 w-4 text-[#FF6030]" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             <button
-              className="h-11 w-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors"
-              data-testid="button-sort"
+              onClick={() => setIsFilterOpen(true)}
+              className={cn(
+                "w-10 h-10 lg:w-11 lg:h-11 rounded-full flex items-center justify-center transition-colors flex-shrink-0",
+                selectedGrade !== "all" 
+                  ? "bg-[#FF6030] text-white" 
+                  : "text-muted-foreground hover:bg-[#E8E8EE]"
+              )}
+              data-testid="button-filter"
             >
-              <ArrowUpDown className="h-5 w-5" />
+              <SlidersHorizontal className="h-5 w-5 lg:h-5 lg:w-5" />
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {sortOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.id}
-                onClick={() => setSortBy(option.id)}
-                className="cursor-pointer"
-              >
-                <span className="flex-1">{option.label}</span>
-                {sortBy === option.id && <Check className="h-4 w-4 text-[#FF6030]" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        
-        <button
-          onClick={() => setIsFilterOpen(true)}
-          className={cn(
-            "h-11 w-11 rounded-full flex items-center justify-center transition-colors",
-            selectedGrade !== "all" 
-              ? "bg-[#FF6030] text-white" 
-              : "text-muted-foreground hover:bg-[#E8E8EE]"
-          )}
-          data-testid="button-filter"
-        >
-          <SlidersHorizontal className="h-5 w-5" />
-        </button>
+          </div>
+        </div>
       </div>
 
-      {/* Tasks Grid - 2 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Tasks Grid - 2 columns on desktop, newsfeed on mobile */}
+      <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 -mx-[15px] px-[15px] lg:mx-0 lg:px-0">
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-48 bg-white animate-pulse rounded-xl" />
           ))
         ) : filteredTasks.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground col-span-2">
+          <div className="text-center py-12 text-muted-foreground lg:col-span-2">
             Задачи не найдены
           </div>
         ) : (
@@ -448,32 +446,34 @@ export default function Tasks() {
             >
               <Link href={`/tasks/${task.slug}`}>
                 <Card 
-                  className="p-5 h-[200px] flex flex-col hover:shadow-md transition-shadow cursor-pointer bg-white border-0 shadow-sm"
+                  className="p-4 md:p-5 h-auto md:h-[200px] flex flex-col hover:shadow-md transition-shadow cursor-pointer bg-white border-0 shadow-sm"
                   data-testid={`task-card-${task.id}`}
                 >
                   {/* Author Avatar + Name -> Arrow -> Category Tag */}
-                  <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-                    <UserAvatar name={task.author || task.authorName || "Аноним"} size="sm" />
-                    <span className="text-sm text-[#1D1D1F] font-medium">{task.author || task.authorName || "Аноним"}</span>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                    <Badge variant="secondary" className="text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0">
-                      {task.category === "product" || task.category === "Продукт" ? "Продукты" : 
-                       task.category === "uxui" || task.category === "UX/UI" ? "UX/UI" :
-                       task.category === "graphic" || task.category === "Графический" ? "Графический" :
-                       task.category === "3d" || task.category === "3D" ? "3D" : "Кейсы"}
-                    </Badge>
-                    <span className={cn("ml-auto text-sm font-medium", getLevelColor(task.level))}>
+                  <div className="flex items-start gap-2 mb-3 flex-shrink-0 relative">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 pr-20 lg:pr-0">
+                      <UserAvatar name={task.author || task.authorName || "Аноним"} size="sm" />
+                      <span className="text-sm lg:text-sm text-[#1D1D1F] font-medium truncate">{task.author || task.authorName || "Аноним"}</span>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground hidden sm:block flex-shrink-0" />
+                      <Badge variant="secondary" className="px-3 py-1 lg:px-2 lg:py-0.5 text-xs lg:text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0 whitespace-nowrap flex-shrink-0">
+                        {task.category === "product" || task.category === "Продукт" ? "Продукты" : 
+                         task.category === "uxui" || task.category === "UX/UI" ? "UX/UI" :
+                         task.category === "graphic" || task.category === "Графический" ? "Графический" :
+                         task.category === "3d" || task.category === "3D" ? "3D" : "Кейсы"}
+                      </Badge>
+                    </div>
+                    <span className={cn("text-sm lg:text-sm font-medium whitespace-nowrap absolute top-0 right-0 lg:static lg:ml-auto flex-shrink-0", getLevelColor(task.level))}>
                       {getLevelLabel(task.level)}
                     </span>
                   </div>
                   
                   {/* Title */}
-                  <h3 className="font-semibold text-base leading-snug mb-2 line-clamp-2 text-[#1D1D1F] flex-shrink-0">
+                  <h3 className="font-semibold text-lg lg:text-base leading-snug mb-2 line-clamp-2 text-[#1D1D1F] flex-shrink-0">
                     {task.title}
                   </h3>
                   
                   {/* Description */}
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-grow">
+                  <p className="text-sm lg:text-sm text-muted-foreground mb-4 line-clamp-2 flex-grow">
                     {task.description}
                   </p>
                   
@@ -493,9 +493,9 @@ export default function Tasks() {
 
       {/* Filter Sheet Overlay */}
       <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-        <SheetContent side="right" className="w-80 bg-white">
+        <SheetContent side="right" className="w-80 sm:w-96 bg-white">
           <SheetHeader className="mb-6">
-            <SheetTitle className="text-lg font-semibold">Фильтры</SheetTitle>
+            <SheetTitle className="text-base md:text-lg font-semibold">Фильтры</SheetTitle>
           </SheetHeader>
           
           <div className="space-y-6">

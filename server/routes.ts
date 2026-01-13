@@ -503,26 +503,154 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Необходима авторизация" });
       }
       
-      const profile = await storage.getProfileByAuthUid(userId);
+      let profile = await storage.getProfileByAuthUid(userId);
       if (!profile) {
         return res.status(401).json({ message: "Профиль не найден" });
       }
 
-      // Evaluate the solution using AI
-      const evaluation = await evaluateTaskSolution(taskDescription || "", description);
+      // Для совместимости с схемой: task_solutions.userId ссылается на users.id
+      // Убеждаемся, что у профиля есть связанный user и используем его id
+      if (!profile.userId) {
+        // upsertProfile создаст/обновит пользователя и профиль, вернёт профиль с userId
+        profile = await storage.upsertProfile(userId, (profile as any).email || "");
+      }
 
-      // Store the solution with evaluation result
-      // For now, we just return the evaluation result
+      const dbUserId = profile.userId!;
+
+      // Сохраняем решение в БД со статусом "pending"
+      const solution = await storage.createTaskSolution({
+        taskId,
+        userId: dbUserId,
+        description,
+        status: mentorCheck ? "mentor_review" : "pending",
+      });
+
+      // Если не требуется проверка ментора, запускаем проверку ИИ асинхронно
+      if (!mentorCheck) {
+        // Запускаем проверку асинхронно (не блокируем ответ)
+        evaluateTaskSolution(taskDescription || "", description)
+          .then(async (evaluation) => {
+            // Сохраняем метрики в feedback как JSON
+            const feedbackData = {
+              feedback: evaluation.feedback,
+              metrics: evaluation.metrics || [],
+            };
+            
+            // Обновляем решение с результатом проверки
+            await storage.updateTaskSolution(solution.id, {
+              status: "reviewed",
+              feedback: JSON.stringify(feedbackData),
+              rating: evaluation.isCorrect ? 1 : 0,
+            });
+          })
+          .catch((err) => {
+            console.error("Error evaluating solution:", err);
+            // В случае ошибки оставляем статус "pending"
+          });
+      }
+
+      // Возвращаем успех без результата проверки (проверка идет асинхронно)
       res.json({
         success: true,
-        evaluation: {
-          isCorrect: evaluation.isCorrect,
-          feedback: evaluation.feedback,
-        },
+        solutionId: solution.id,
+        status: solution.status,
+        // Не возвращаем evaluation сразу - оно будет доступно после проверки
       });
     } catch (err) {
       console.error('Error submitting solution:', err);
       res.status(500).json({ message: "Ошибка при отправке решения" });
+    }
+  });
+
+  // Получить решение пользователя для задачи
+  app.get('/api/tasks/:taskId/solutions/my', isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.taskId);
+      
+      // Получаем userId из разных источников
+      let userId: string | null = null;
+      if (req.query.userId) {
+        userId = req.query.userId as string;
+      } else if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Необходима авторизация" });
+      }
+      
+      let profile = await storage.getProfileByAuthUid(userId);
+      if (!profile) {
+        return res.status(401).json({ message: "Профиль не найден" });
+      }
+
+      // Убеждаемся, что у профиля есть связанный user и используем его id
+      if (!profile.userId) {
+        profile = await storage.upsertProfile(userId, (profile as any).email || "");
+      }
+
+      const dbUserId = profile.userId!;
+
+      const solution = await storage.getTaskSolution(taskId, dbUserId);
+      
+      if (!solution) {
+        return res.json({ solution: null });
+      }
+
+      // Преобразуем решение в формат для клиента
+      let evaluation = null;
+      if (solution.status === "reviewed" && solution.feedback) {
+        try {
+          // Пытаемся распарсить feedback как JSON (с метриками)
+          const feedbackData = JSON.parse(solution.feedback);
+          evaluation = {
+            feedback: feedbackData.feedback || solution.feedback,
+            isCorrect: solution.rating === 1,
+            metrics: feedbackData.metrics || [],
+          };
+        } catch {
+          // Если не JSON, используем старый формат
+          evaluation = {
+            feedback: solution.feedback,
+            isCorrect: solution.rating === 1,
+            metrics: [
+              {
+                label: "Понимание задачи",
+                percentage: solution.rating === 1 ? 85 : 45,
+                grade: solution.rating === 1 ? "Middle" : "Junior",
+              },
+              {
+                label: "Качество решения",
+                percentage: solution.rating === 1 ? 80 : 50,
+                grade: solution.rating === 1 ? "Middle" : "Junior",
+              },
+              {
+                label: "Структурированность",
+                percentage: solution.rating === 1 ? 75 : 40,
+                grade: solution.rating === 1 ? "Middle" : "Junior",
+              },
+              {
+                label: "Практическая применимость",
+                percentage: solution.rating === 1 ? 82 : 48,
+                grade: solution.rating === 1 ? "Middle" : "Junior",
+              },
+            ],
+          };
+        }
+      }
+
+      res.json({
+        solution: {
+          id: solution.id,
+          content: solution.description,
+          description: solution.description,
+          status: solution.status,
+          evaluation,
+        },
+      });
+    } catch (err) {
+      console.error('Error getting solution:', err);
+      res.status(500).json({ message: "Ошибка при получении решения" });
     }
   });
 

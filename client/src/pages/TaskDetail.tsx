@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { motion } from "framer-motion";
 import { 
@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTask } from "@/hooks/use-data";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -210,6 +210,37 @@ export default function TaskDetail() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isSolutionPending, setIsSolutionPending] = useState(false);
 
+  // Получаем решение пользователя для этой задачи (с polling для обновления статуса)
+  const { data: solutionData } = useQuery({
+    queryKey: ['/api/tasks', task?.id, 'solutions/my', user?.id],
+    queryFn: async () => {
+      if (!task?.id || !user?.id) return null;
+      const response = await apiRequest('GET', `/api/tasks/${task.id}/solutions/my?userId=${user.id}`);
+      return response.json();
+    },
+    enabled: !!task?.id && !!user?.id,
+    refetchInterval: (data) => {
+      // Polling каждые 5 секунд, если решение на проверке
+      if (data?.solution?.status === 'pending' || data?.solution?.status === 'mentor_review') {
+        return 5000;
+      }
+      return false; // Останавливаем polling, если решение проверено
+    },
+  });
+
+  // Обновляем локальное состояние решения при получении данных
+  useEffect(() => {
+    if (solutionData?.solution) {
+      setUserSolution(solutionData.solution);
+      // Если решение проверено, убираем статус "на проверке"
+      if (solutionData.solution.status === 'reviewed' && solutionData.solution.evaluation) {
+        setIsSolutionPending(false);
+      } else if (solutionData.solution.status === 'pending' || solutionData.solution.status === 'mentor_review') {
+        setIsSolutionPending(true);
+      }
+    }
+  }, [solutionData]);
+
   const favoriteMutation = useMutation({
     mutationFn: async (taskId: number) => {
       return apiRequest("POST", `/api/tasks/${taskId}/favorite`);
@@ -305,9 +336,12 @@ export default function TaskDetail() {
     setUserSolution({ 
       content: solutionData?.content || solutionData?.description || "",
       description: solutionData?.description || "",
-      status: "pending",
-      evaluation: null 
+      status: solutionData?.status || "pending",
+      evaluation: null,
+      solutionId: solutionData?.solutionId,
     });
+    // Инвалидируем запрос для получения решения
+    queryClient.invalidateQueries({ queryKey: ['/api/tasks', task?.id, 'solutions/my'] });
   };
 
   const parseDescription = (description: string) => {
@@ -367,45 +401,45 @@ export default function TaskDetail() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl"
+        className="max-w-4xl mx-auto"
       >
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 md:mb-6 gap-2 -mx-[15px] lg:mx-0 px-[15px] lg:px-0">
           {/* Left: Back + Author */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
             <Link href="/">
               <button 
-                className="h-9 w-9 rounded-full flex items-center justify-center bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors"
+                className="h-8 w-8 md:h-9 md:w-9 rounded-full flex items-center justify-center bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors flex-shrink-0"
                 data-testid="button-back"
               >
-                <ArrowLeft className="h-4 w-4 text-[#1D1D1F]" />
+                <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 text-[#1D1D1F]" />
               </button>
             </Link>
             
             {isCompanyTask && companySlug ? (
               <Link href={`/companies/${companySlug}`}>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors cursor-pointer">
-                  <Building2 className="h-4 w-4 text-[#1D1D1F]" />
-                  <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
+                <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors cursor-pointer min-w-0">
+                  <Building2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-[#1D1D1F] flex-shrink-0" />
+                  <span className="text-xs md:text-sm font-medium text-[#1D1D1F] truncate">{authorName}</span>
                 </div>
               </Link>
             ) : authorId ? (
               <Link href={`/users/${authorId}`}>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors cursor-pointer">
-                  <UserAvatar name={authorName} size="sm" />
-                  <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
+                <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-[#E8E8EE] hover:bg-[#DCDCE4] transition-colors cursor-pointer min-w-0">
+                  <UserAvatar name={authorName} size="sm" className="flex-shrink-0" />
+                  <span className="text-xs md:text-sm font-medium text-[#1D1D1F] truncate">{authorName}</span>
                 </div>
               </Link>
             ) : (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8E8EE]">
-                <UserAvatar name={authorName} size="sm" />
-                <span className="text-sm font-medium text-[#1D1D1F]">{authorName}</span>
+              <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-full bg-[#E8E8EE] min-w-0">
+                <UserAvatar name={authorName} size="sm" className="flex-shrink-0" />
+                <span className="text-xs md:text-sm font-medium text-[#1D1D1F] truncate">{authorName}</span>
               </div>
             )}
           </div>
           
           {/* Right: Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
             {/* Лайки и избранное временно отключены */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -431,30 +465,33 @@ export default function TaskDetail() {
             {user ? (
               isSolutionPending ? (
                 <Button 
-                  className="gap-2 bg-[#325BFF] text-white hover:bg-[#2A4FE6] rounded-xl"
+                  className="gap-1.5 md:gap-2 bg-[#325BFF] text-white hover:bg-[#2A4FE6] rounded-xl text-xs md:text-sm px-3 md:px-4 h-8 md:h-10"
                   disabled
                   data-testid="button-solution-pending"
                 >
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Ответ на проверке
+                  <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />
+                  <span className="hidden sm:inline">Ответ на проверке</span>
+                  <span className="sm:hidden">Проверка</span>
                 </Button>
               ) : (
                 <Button 
-                  className="gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl"
+                  className="gap-1.5 md:gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl text-xs md:text-sm px-3 md:px-4 h-8 md:h-10"
                   onClick={handleSubmitSolution}
                   data-testid="button-submit-solution"
                 >
-                  <Send className="h-4 w-4" />
-                  Отправить решение
+                  <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Отправить решение</span>
+                  <span className="sm:hidden">Отправить</span>
                 </Button>
               )
             ) : (
               <Link href="/auth">
                 <Button 
-                  className="gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl"
+                  className="gap-1.5 md:gap-2 bg-[#2D2D2D] text-white hover:bg-[#3D3D3D] rounded-xl text-xs md:text-sm px-3 md:px-4 h-8 md:h-10"
                   data-testid="button-login-to-submit"
                 >
-                  Войдите, чтобы отправить
+                  <span className="hidden sm:inline">Войдите, чтобы отправить</span>
+                  <span className="sm:hidden">Войти</span>
                 </Button>
               </Link>
             )}
@@ -462,12 +499,12 @@ export default function TaskDetail() {
         </div>
 
         {/* Task Title */}
-        <h1 className="text-2xl font-bold text-[#1D1D1F] mb-6 leading-tight">
+        <h1 className="text-xl md:text-2xl font-bold text-[#1D1D1F] mb-4 md:mb-6 leading-tight">
           {task.title}
         </h1>
 
         {/* Meta Info Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
           <div>
             <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
               <FolderOpen className="h-3 w-3" /> Сфера
@@ -498,16 +535,16 @@ export default function TaskDetail() {
 
         {/* Tags */}
         {task.tags && task.tags.length > 0 && (
-          <div className="flex items-center gap-2 mb-6">
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <div className="mb-6 -mx-[15px] lg:mx-0">
+            <span className="text-xs text-muted-foreground flex items-center gap-1 mb-2 px-[15px] lg:px-0">
               <FolderOpen className="h-3 w-3" /> Теги
             </span>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide px-[15px] lg:px-0 lg:flex-wrap lg:overflow-visible">
               {task.tags.map((tag: string, index: number) => (
                 <Badge 
                   key={index} 
                   variant="secondary" 
-                  className="text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0 hover:bg-[#DCDCE4] cursor-pointer"
+                  className="text-xs font-normal bg-[#E8E8EE] text-[#1D1D1F] border-0 hover:bg-[#DCDCE4] cursor-pointer flex-shrink-0 whitespace-nowrap"
                 >
                   {tag}
                 </Badge>
@@ -517,7 +554,7 @@ export default function TaskDetail() {
         )}
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 mb-6 border-b border-border pb-3 overflow-x-auto overflow-y-hidden">
+        <div className="flex items-center gap-2 mb-6 border-b border-border pb-3 overflow-x-auto overflow-y-hidden -mx-[15px] lg:mx-0 px-[15px] lg:px-0">
           <button
             onClick={() => setActiveTab("description")}
             className={cn(

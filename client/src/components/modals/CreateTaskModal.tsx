@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -384,7 +385,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         hideCloseButton
-        className="max-w-4xl h-[90vh] flex flex-col gap-0 p-0"
+        className="max-w-4xl lg:h-[90vh] flex flex-col gap-0 p-0 max-h-[90vh]"
       >
         <DialogHeader className="px-6 py-4 border-b flex-row items-center justify-between gap-4">
           <DialogTitle style={{ fontSize: "24px" }} className="font-semibold">Создать задачу</DialogTitle>
@@ -403,7 +404,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
           {/* Category and Level selectors */}
           <div className="flex gap-3">
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={`w-40 ${buttonStyle}`} data-testid="select-category">
+              <SelectTrigger className={`flex-1 lg:w-40 ${buttonStyle}`} data-testid="select-category">
                 <SelectValue placeholder="Категория" />
               </SelectTrigger>
               <SelectContent>
@@ -419,7 +420,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             </Select>
 
             <Select value={level} onValueChange={setLevel}>
-              <SelectTrigger className={`w-32 ${buttonStyle}`} data-testid="select-level">
+              <SelectTrigger className={`flex-1 lg:w-32 ${buttonStyle}`} data-testid="select-level">
                 <SelectValue placeholder="Уровень" />
               </SelectTrigger>
               <SelectContent>
@@ -433,23 +434,28 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
           </div>
 
           {/* Title */}
-          <Input
-            placeholder="Название задачи"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{ fontSize: "24px" }}
-            className="font-medium border-0 px-0 focus-visible:ring-0 bg-transparent h-auto py-2"
-            data-testid="input-task-title"
-          />
+          <div className="space-y-2">
+            <Label className="text-xs lg:text-base">Название задачи</Label>
+            <Input
+              placeholder="Название задачи"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="font-medium lg:text-2xl text-lg border-0 px-0 focus-visible:ring-0 bg-transparent h-auto py-2"
+              data-testid="input-task-title"
+            />
+          </div>
 
           {/* Description */}
-          <Textarea
-            placeholder="Опишите вашу задачу максимально подробно"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="min-h-[200px] resize-none border-0 px-0 focus-visible:ring-0 bg-transparent text-muted-foreground"
-            data-testid="input-task-description"
-          />
+          <div className="space-y-2">
+            <Label className="text-xs lg:text-base">Описание</Label>
+            <Textarea
+              placeholder="Опишите вашу задачу максимально подробно"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[200px] resize-none border-0 px-0 focus-visible:ring-0 bg-transparent text-muted-foreground"
+              data-testid="input-task-description"
+            />
+          </div>
 
           {/* Attachments carousel */}
           {attachments.length > 0 && (
@@ -512,7 +518,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
         </div>
 
         {/* Bottom toolbar */}
-        <div className="px-6 py-4 border-t flex items-center justify-between gap-4">
+        <div className="px-6 py-4 border-t flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white lg:bg-transparent sticky bottom-0">
           <div className="flex items-center gap-2">
             <Button size="sm" className={buttonStyle}>
               ОТКРЫТЬ
@@ -711,10 +717,11 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             <Button 
               variant="outline" 
               onClick={handleSaveDraft}
+              className="order-2 lg:order-1"
               data-testid="button-save-draft"
             >
               Сохранить в черновик
@@ -722,6 +729,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             <Button 
               onClick={handleSubmit}
               disabled={!title || !category || !level}
+              className="order-1 lg:order-2"
               data-testid="button-create-task"
             >
               Создать задачу

@@ -337,11 +337,11 @@ export default function Profile() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="max-w-2xl mx-auto space-y-6"
+        className="max-w-2xl mx-auto space-y-4 md:space-y-6"
       >
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start gap-5">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-start gap-3 md:gap-5">
               <div className="relative">
                 <input
                   ref={fileInputRef}
@@ -354,7 +354,7 @@ export default function Profile() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="cursor-pointer relative group" data-testid="button-avatar-menu">
-                      <Avatar className="w-20 h-20 border-2 border-border/30">
+                      <Avatar className="w-16 h-16 md:w-20 md:h-20 border-2 border-border/30">
                         <AvatarImage src={avatarUrl || ""} />
                         <AvatarFallback 
                           className="text-2xl text-white font-medium"
@@ -492,14 +492,14 @@ export default function Profile() {
       </motion.div>
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle>Редактировать профиль</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             <div className="space-y-2">
-              <Label>Имя</Label>
+              <Label className="text-xs lg:text-sm">Имя</Label>
               <Input
                 value={editFullName}
                 onChange={(e) => setEditFullName(e.target.value)}
@@ -509,7 +509,7 @@ export default function Profile() {
             </div>
 
             <div className="space-y-2">
-              <Label>О себе / роль</Label>
+              <Label className="text-xs lg:text-sm">О себе / роль</Label>
               <Input
                 value={editBio}
                 onChange={(e) => setEditBio(e.target.value)}
@@ -518,9 +518,9 @@ export default function Profile() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Страна</Label>
+                <Label className="text-xs lg:text-sm">Страна</Label>
                 <Select value={editCountry} onValueChange={setEditCountry}>
                   <SelectTrigger data-testid="select-country">
                     <SelectValue placeholder="Выберите страну" />
@@ -535,7 +535,7 @@ export default function Profile() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Город</Label>
+                <Label className="text-xs lg:text-sm">Город</Label>
                 <Input
                   value={editCity}
                   onChange={(e) => setEditCity(e.target.value)}
@@ -545,9 +545,9 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Грейд</Label>
+                <Label className="text-xs lg:text-sm">Грейд</Label>
                 <Select value={editGrade} onValueChange={setEditGrade}>
                   <SelectTrigger data-testid="select-grade">
                     <SelectValue placeholder="Выберите грейд" />
@@ -562,7 +562,7 @@ export default function Profile() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Компания</Label>
+                <Label className="text-xs lg:text-sm">Компания</Label>
                 <Input
                   value={editCompany}
                   onChange={(e) => setEditCompany(e.target.value)}
@@ -573,7 +573,7 @@ export default function Profile() {
             </div>
 
             <div className="border-t pt-4 mt-4">
-              <Label className="text-sm font-medium mb-3 block">Социальные сети</Label>
+              <Label className="text-xs lg:text-sm font-medium mb-3 block">Социальные сети</Label>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
@@ -612,9 +612,9 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col lg:flex-row gap-3 px-6 py-4 border-t lg:border-0">
             <Button
-              className="flex-1 bg-[#FF6030] hover:bg-[#E5562B] text-white"
+              className="flex-1 bg-[#FF6030] hover:bg-[#E5562B] text-white order-2 lg:order-1"
               onClick={handleSave}
               disabled={saveProfileMutation.isPending}
               data-testid="button-save-profile"
@@ -630,6 +630,7 @@ export default function Profile() {
             </Button>
             <Button
               variant="outline"
+              className="order-1 lg:order-2"
               onClick={() => setIsEditModalOpen(false)}
               data-testid="button-cancel-edit"
             >

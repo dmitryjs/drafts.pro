@@ -102,12 +102,12 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent hideCloseButton className="max-w-3xl">
-        <DialogHeader className="relative">
+      <DialogContent hideCloseButton className="max-w-3xl max-h-[90vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="relative px-6 py-4 border-b lg:border-0">
           <DialogTitle className="text-xl font-bold">Создать новый батл</DialogTitle>
           <DialogClose asChild>
             <button 
-              className="absolute right-0 top-0 text-muted-foreground hover:text-foreground"
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
               data-testid="button-close-modal"
             >
               <X className="h-5 w-5" />
@@ -115,147 +115,152 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
           </DialogClose>
         </DialogHeader>
 
-        {/* Info Banner */}
-        <div className="pt-2">
-          <h3 className="font-medium text-[#1D1D1F] mb-1">Как работает создание батла?</h3>
-          <p className="text-sm text-muted-foreground">
-            Выберите работу, загрузите её на батл, дождитесь оппонента и пройдите модерацию. После этого начнётся голосование.
-          </p>
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-sm text-muted-foreground">Победитель получит:</span>
-            <Badge className="bg-[#E8E8EE] text-[#1D1D1F] border-0">
-              +XP 50
-            </Badge>
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+          {/* Info Banner */}
+          <div className="pt-2">
+            <h3 className="font-medium text-[#1D1D1F] mb-1">Как работает создание батла?</h3>
+            <p className="text-sm text-muted-foreground">
+              Выберите работу, загрузите её на батл, дождитесь оппонента и пройдите модерацию. После этого начнётся голосование.
+            </p>
+            <div className="flex items-center gap-2 mt-3">
+              <span className="text-sm text-muted-foreground">Победитель получит:</span>
+              <Badge className="bg-[#E8E8EE] text-[#1D1D1F] border-0">
+                +XP 50
+              </Badge>
+            </div>
+          </div>
+
+          {/* Mobile: Vertical Layout, Desktop: Two Column Layout */}
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 mt-4">
+            {/* Image Upload */}
+            <div>
+              <h3 className="font-semibold text-[#1D1D1F] mb-4">Выберите свою работу</h3>
+              
+              <Card className="aspect-square bg-[#F9F9F9] border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground transition-colors relative overflow-hidden">
+                {previewUrl ? (
+                  <>
+                    <img 
+                      src={previewUrl} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage(null);
+                        setPreviewUrl(null);
+                      }}
+                      data-testid="button-remove-image"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageSelect}
+                      data-testid="input-battle-image"
+                    />
+                    <Button variant="outline" className="rounded-xl mb-3" data-testid="button-select-image">
+                      Выбрать файл
+                    </Button>
+                    <p className="text-sm text-muted-foreground text-center px-4">
+                      Загрузите свою работу для участия в батле
+                    </p>
+                  </label>
+                )}
+              </Card>
+              
+              {/* Important Notice */}
+              <div className="flex items-start gap-2 mt-4 p-3 bg-[#F9F9F9] rounded-lg">
+                <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium text-[#1D1D1F]">Важно!</span>
+                  <br />
+                  Можно использовать только работы, созданные вами.
+                </div>
+              </div>
+            </div>
+            
+            {/* Battle Info */}
+            <div>
+              <h3 className="font-semibold text-[#1D1D1F] mb-4">Информация о батле</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="battle-title" className="text-xs lg:text-sm font-medium">
+                    Название батла
+                  </Label>
+                  <Input
+                    id="battle-title"
+                    placeholder="Батл #12345"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="mt-1.5 rounded-xl"
+                    data-testid="input-battle-title"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-xs lg:text-sm font-medium">
+                    Категория
+                  </Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="mt-1.5 rounded-xl" data-testid="select-battle-category">
+                      <SelectValue placeholder="Выберите категорию" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2.5 h-2.5 rounded-full ${cat.color}`} />
+                            {cat.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="battle-description" className="text-xs lg:text-sm font-medium">
+                    Описание
+                  </Label>
+                  <Textarea
+                    id="battle-description"
+                    placeholder="Опишите ваш батл..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="mt-1.5 min-h-[120px] rounded-xl resize-none"
+                    data-testid="input-battle-description"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-2 gap-6 mt-4">
-          {/* Left: Image Upload */}
-          <div>
-            <h3 className="font-semibold text-[#1D1D1F] mb-4">Выберите свою работу</h3>
-            
-            <Card className="aspect-square bg-[#F9F9F9] border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground transition-colors relative overflow-hidden">
-              {previewUrl ? (
-                <>
-                  <img 
-                    src={previewUrl} 
-                    alt="Preview" 
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedImage(null);
-                      setPreviewUrl(null);
-                    }}
-                    data-testid="button-remove-image"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageSelect}
-                    data-testid="input-battle-image"
-                  />
-                  <Button variant="outline" className="rounded-xl mb-3" data-testid="button-select-image">
-                    Выбрать файл
-                  </Button>
-                  <p className="text-sm text-muted-foreground text-center px-4">
-                    Загрузите свою работу для участия в батле
-                  </p>
-                </label>
-              )}
-            </Card>
-            
-            {/* Important Notice */}
-            <div className="flex items-start gap-2 mt-4 p-3 bg-[#F9F9F9] rounded-lg">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-muted-foreground">
-                <span className="font-medium text-[#1D1D1F]">Важно!</span>
-                <br />
-                Можно использовать только работы, созданные вами.
-              </div>
-            </div>
-          </div>
-          
-          {/* Right: Battle Info */}
-          <div>
-            <h3 className="font-semibold text-[#1D1D1F] mb-4">Информация о батле</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="battle-title" className="text-sm font-medium">
-                  Название батла
-                </Label>
-                <Input
-                  id="battle-title"
-                  placeholder="Батл #12345"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="mt-1.5 rounded-xl"
-                  data-testid="input-battle-title"
-                />
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium">
-                  Категория
-                </Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="mt-1.5 rounded-xl" data-testid="select-battle-category">
-                    <SelectValue placeholder="Выберите категорию" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2.5 h-2.5 rounded-full ${cat.color}`} />
-                          {cat.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="battle-description" className="text-sm font-medium">
-                  Описание
-                </Label>
-                <Textarea
-                  id="battle-description"
-                  placeholder="Опишите ваш батл..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="mt-1.5 min-h-[120px] rounded-xl resize-none"
-                  data-testid="input-battle-description"
-                />
-              </div>
-            </div>
-            
-            <Button 
-              className="w-full mt-6 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl disabled:opacity-50"
-              disabled={!isFormValid || createBattleMutation.isPending}
-              onClick={handleSubmit}
-              data-testid="button-create-battle"
-            >
-              {createBattleMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Создание...
-                </>
-              ) : (
-                "Создать батл"
-              )}
-            </Button>
-          </div>
+        {/* Bottom Button - Fixed at bottom for mobile */}
+        <div className="px-6 py-4 border-t lg:border-0 lg:px-0 lg:py-0 lg:mt-6">
+          <Button 
+            className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl disabled:opacity-50"
+            disabled={!isFormValid || createBattleMutation.isPending}
+            onClick={handleSubmit}
+            data-testid="button-create-battle"
+          >
+            {createBattleMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Создание...
+              </>
+            ) : (
+              "Создать батл"
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

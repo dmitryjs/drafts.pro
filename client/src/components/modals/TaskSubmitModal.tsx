@@ -81,8 +81,15 @@ export default function TaskSubmitModal({
     onSuccess: (data) => {
       setIsEvaluating(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      // Передаем данные решения без evaluation (проверка идет асинхронно)
       if (onSuccess) {
-        onSuccess({ content: answer, description: answer, evaluation: data.evaluation });
+        onSuccess({ 
+          content: answer, 
+          description: answer, 
+          solutionId: data.solutionId,
+          status: data.status || "pending",
+          evaluation: null // Оценка появится позже
+        });
       }
       handleClose();
     },

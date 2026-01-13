@@ -691,11 +691,11 @@ export default function Assessment() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="w-full max-w-[600px]"
+      className="w-full max-w-[600px] mx-auto"
     >
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold mb-2">Выберите сферу</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-base lg:text-2xl font-bold mb-2">Выберите сферу</h1>
+        <p className="text-sm lg:text-base text-muted-foreground">
           Выберите направление дизайна для прохождения теста
         </p>
       </div>
@@ -726,7 +726,7 @@ export default function Assessment() {
               >
                 <RadioGroupItem value={sphere.id} id={sphere.id} />
                 <div className="flex-1">
-                  <p className="font-medium">{sphere.name}</p>
+                  <p className="text-base lg:text-lg font-medium">{sphere.name}</p>
                   <p className="text-sm text-muted-foreground">{sphere.description}</p>
                 </div>
                 <span className="text-sm text-muted-foreground">
@@ -798,11 +798,11 @@ export default function Assessment() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="w-full max-w-[700px]"
+        className="w-full max-w-[700px] mx-auto"
       >
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold">Тестирование</h1>
+            <h1 className="text-base lg:text-xl font-bold">Тестирование</h1>
             <p className="text-sm text-muted-foreground">
               Вопрос {currentQuestion + 1} из {questions.length}
               {isFreeText && <span className="ml-2 text-primary">(Открытый вопрос)</span>}
@@ -823,7 +823,7 @@ export default function Assessment() {
         <Progress value={progress} className="mb-6" />
 
         <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-6">{question.question}</h2>
+          <h2 className="text-sm lg:text-lg font-semibold mb-6">{question.question}</h2>
 
           {isFreeText ? (
             <div className="space-y-3">
@@ -910,7 +910,7 @@ export default function Assessment() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="w-full max-w-[700px]"
+        className="w-full max-w-[700px] mx-auto"
       >
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
@@ -1162,7 +1162,7 @@ export default function Assessment() {
 
   return (
     <MainLayout title="Оценка навыков" showCreateButton={false}>
-      <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+      <div className="min-h-[calc(100vh-8rem)] flex items-start lg:items-center justify-center">
         <AnimatePresence mode="wait">
           {step === "upload" && renderUploadStep()}
           {step === "processing" && renderProcessingStep()}
