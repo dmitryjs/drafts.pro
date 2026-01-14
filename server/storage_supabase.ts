@@ -344,5 +344,43 @@ export class SupabaseStorage {
     throw new Error("Failed to update task solution");
   }
 
+  // ============================================
+  // BATTLES (заглушки)
+  // ============================================
+
+  async getBattles(_filters?: { status?: string; category?: string }): Promise<any[]> {
+    // Временно возвращаем пустой массив
+    return [];
+  }
+
+  async getBattlesByProfile(_profileId: number): Promise<any[]> {
+    return [];
+  }
+
+  async getBattleBySlug(_slug: string): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async createBattle(_battle: any): Promise<any> {
+    throw new Error("Not implemented - use Supabase API directly");
+  }
+
+  async updateBattle(_id: number, _data: any): Promise<any> {
+    throw new Error("Not implemented - use Supabase API directly");
+  }
+
+  async deleteBattle(_id: number): Promise<void> {
+    throw new Error("Not implemented - use Supabase API directly");
+  }
+
+  // ============================================
+  // ASSESSMENT QUESTIONS (заглушки)
+  // ============================================
+
+  async getAssessmentQuestions(_specialization: string): Promise<any[]> {
+    // Временно возвращаем пустой массив
+    return [];
+  }
+
   // Добавьте другие методы как заглушки по необходимости
 }

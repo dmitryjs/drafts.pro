@@ -18,11 +18,19 @@ export interface IAuthStorage {
 
 class AuthStorage implements IAuthStorage {
   async getUser(id: string): Promise<AuthUser | undefined> {
-    const [user] = await db.select().from(authUsers).where(eq(authUsers.id, id));
-    return user;
+    if (!db) return undefined;
+    try {
+      const [user] = await db.select().from(authUsers).where(eq(authUsers.id, id));
+      return user;
+    } catch {
+      return undefined;
+    }
   }
 
   async upsertUser(userData: UpsertAuthUser): Promise<AuthUser> {
+    if (!db) {
+      throw new Error("Database not available - Replit Auth requires database connection");
+    }
     const [user] = await db
       .insert(authUsers)
       .values(userData)
@@ -76,26 +84,51 @@ class AuthStorage implements IAuthStorage {
   }
 
   async getAllUsers(): Promise<AuthUser[]> {
-    return await db.select().from(authUsers).orderBy(authUsers.createdAt);
+    if (!db) return [];
+    try {
+      return await db.select().from(authUsers).orderBy(authUsers.createdAt);
+    } catch {
+      return [];
+    }
   }
 
   async setAdmin(userId: string, isAdmin: boolean): Promise<AuthUser | undefined> {
-    const [user] = await db
-      .update(authUsers)
-      .set({ isAdmin, updatedAt: new Date() })
-      .where(eq(authUsers.id, userId))
-      .returning();
-    return user;
+    if (!db) return undefined;
+    try {
+      const [user] = await db
+        .update(authUsers)
+        .set({ isAdmin, updatedAt: new Date() })
+        .where(eq(authUsers.id, userId))
+        .returning();
+      return user;
+    } catch {
+      return undefined;
+    }
   }
 
   async isAdmin(userId: string): Promise<boolean> {
-    const [user] = await db.select({ isAdmin: authUsers.isAdmin }).from(authUsers).where(eq(authUsers.id, userId));
-    return user?.isAdmin === true;
+    if (!db) return false;
+    try {
+      const [user] = await db.select({ isAdmin: authUsers.isAdmin }).from(authUsers).where(eq(authUsers.id, userId));
+      return user?.isAdmin === true;
+    } catch {
+      return false;
+    }
   }
 
   async getUsersCount(): Promise<number> {
-    const [result] = await db.select({ count: count() }).from(authUsers);
-    return result?.count || 0;
+    // db больше не используется - используем Supabase API или возвращаем заглушку
+    // Для MVP возвращаем 0, так как подсчёт пользователей не критичен
+    if (!db) {
+      return 0;
+    }
+    try {
+      const [result] = await db.select({ count: count() }).from(authUsers);
+      return result?.count || 0;
+    } catch (err) {
+      // Если db не доступен, возвращаем 0
+      return 0;
+    }
   }
 }
 

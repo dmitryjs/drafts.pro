@@ -380,20 +380,62 @@ export default function Tasks() {
       {/* Search Bar - Full Width with Sort/Filter */}
       <div className="mb-6 -mx-[15px] px-[15px] lg:mx-0 lg:px-0">
         <div className="relative flex items-center lg:gap-2">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
-          <Input
-            placeholder="Поиск задач"
-            className="pl-12 pr-[88px] lg:pr-4 h-[50px] lg:h-11 bg-white border-border rounded-[12px] lg:rounded-xl w-full text-sm lg:text-base max-w-full"
-            data-testid="input-search-tasks"
-          />
-          <div className="absolute right-[12px] top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
+            <Input
+              placeholder="Поиск задач"
+              className="pl-12 pr-[88px] lg:pr-4 h-[50px] lg:h-11 bg-[#FFFFFF] lg:bg-[#FFFFFF] border-border rounded-[12px] lg:rounded-xl w-full text-sm lg:text-base max-w-full"
+              data-testid="input-search-tasks"
+            />
+            {/* Mobile: buttons inside search */}
+            <div className="absolute right-[12px] top-1/2 -translate-y-1/2 flex items-center gap-2 lg:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors flex-shrink-0"
+                    data-testid="button-sort"
+                  >
+                    <ArrowUpDown className="h-5 w-5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {sortOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.id}
+                      onClick={() => setSortBy(option.id)}
+                      className="cursor-pointer"
+                    >
+                      <span className="flex-1">{option.label}</span>
+                      {sortBy === option.id && <Check className="h-4 w-4 text-[#FF6030]" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <button
+                onClick={() => setIsFilterOpen(true)}
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0",
+                  selectedGrade !== "all" 
+                    ? "bg-[#FF6030] text-white" 
+                    : "text-muted-foreground hover:bg-[#E8E8EE]"
+                )}
+                data-testid="button-filter"
+              >
+                <SlidersHorizontal className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Desktop: Sort and Filter buttons outside */}
+          <div className="hidden lg:flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="w-10 h-10 lg:w-11 lg:h-11 rounded-full flex items-center justify-center text-muted-foreground hover:bg-[#E8E8EE] transition-colors flex-shrink-0"
-                  data-testid="button-sort"
+                  className="h-11 w-11 rounded-xl flex items-center justify-center text-muted-foreground bg-[#E8E8E8] hover:bg-[#D7D7D7] transition-colors flex-shrink-0"
+                  data-testid="button-sort-desktop"
                 >
-                  <ArrowUpDown className="h-5 w-5 lg:h-5 lg:w-5" />
+                  <ArrowUpDown className="h-5 w-5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -409,18 +451,18 @@ export default function Tasks() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            
+
             <button
               onClick={() => setIsFilterOpen(true)}
               className={cn(
-                "w-10 h-10 lg:w-11 lg:h-11 rounded-full flex items-center justify-center transition-colors flex-shrink-0",
+                "h-11 w-11 rounded-xl flex items-center justify-center transition-colors flex-shrink-0",
                 selectedGrade !== "all" 
-                  ? "bg-[#FF6030] text-white" 
-                  : "text-muted-foreground hover:bg-[#E8E8EE]"
+                  ? "bg-[#FF6030] text-white hover:bg-[#E5562B]" 
+                  : "bg-[#E8E8E8] text-muted-foreground hover:bg-[#D7D7D7]"
               )}
-              data-testid="button-filter"
+              data-testid="button-filter-desktop"
             >
-              <SlidersHorizontal className="h-5 w-5 lg:h-5 lg:w-5" />
+              <SlidersHorizontal className="h-5 w-5" />
             </button>
           </div>
         </div>

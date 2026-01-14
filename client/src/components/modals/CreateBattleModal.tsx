@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Upload, Info, X, Loader2 } from "lucide-react";
+import CategoryIcon3D from "@assets/icons/CategoryIcons_3D.svg";
+import CategoryIconGraphic from "@assets/icons/CategoryIcons_Graphic.svg";
+import CategoryIconProducts from "@assets/icons/CategoryIcons_Products.svg";
+import CategoryIconUXUI from "@assets/icons/CategoryIcons_UXUI.svg";
 import {
   Dialog,
   DialogContent,
@@ -30,10 +34,10 @@ interface CreateBattleModalProps {
 }
 
 const categories = [
-  { value: "product", label: "Продукт", color: "bg-purple-500" },
-  { value: "graphic", label: "Графический", color: "bg-yellow-500" },
-  { value: "uxui", label: "UX/UI", color: "bg-pink-500" },
-  { value: "3d", label: "3D", color: "bg-blue-500" },
+  { value: "product", label: "Продукт", icon: CategoryIconProducts },
+  { value: "graphic", label: "Графический", icon: CategoryIconGraphic },
+  { value: "uxui", label: "UX/UI", icon: CategoryIconUXUI },
+  { value: "3d", label: "3D", icon: CategoryIcon3D },
 ];
 
 export default function CreateBattleModal({ open, onOpenChange }: CreateBattleModalProps) {
@@ -102,12 +106,12 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent hideCloseButton className="max-w-3xl max-h-[90vh] flex flex-col gap-0 p-0">
-        <DialogHeader className="relative px-6 py-4 border-b lg:border-0">
+      <DialogContent hideCloseButton className="!max-w-3xl lg:!max-w-3xl p-0">
+        <DialogHeader className="relative px-6 lg:px-6 pt-6 lg:pt-6 pb-0">
           <DialogTitle className="text-xl font-bold">Создать новый батл</DialogTitle>
           <DialogClose asChild>
             <button 
-              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+              className="absolute right-0 top-0 lg:right-5 lg:top-5 text-muted-foreground hover:text-foreground"
               data-testid="button-close-modal"
             >
               <X className="h-5 w-5" />
@@ -115,23 +119,23 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
           </DialogClose>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-          {/* Info Banner */}
-          <div className="pt-2">
-            <h3 className="font-medium text-[#1D1D1F] mb-1">Как работает создание батла?</h3>
-            <p className="text-sm text-muted-foreground">
-              Выберите работу, загрузите её на батл, дождитесь оппонента и пройдите модерацию. После этого начнётся голосование.
-            </p>
-            <div className="flex items-center gap-2 mt-3">
-              <span className="text-sm text-muted-foreground">Победитель получит:</span>
-              <Badge className="bg-[#E8E8EE] text-[#1D1D1F] border-0">
-                +XP 50
-              </Badge>
-            </div>
+        {/* Info Banner */}
+        <div className="px-6 lg:px-6 pt-2">
+          <h3 className="font-medium text-[#1D1D1F] mb-1">Как работает создание батла?</h3>
+          <p className="text-sm text-muted-foreground">
+            Выберите работу, загрузите её на батл, дождитесь оппонента и пройдите модерацию. После этого начнётся голосование.
+          </p>
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-sm text-muted-foreground">Победитель получит:</span>
+            <Badge className="bg-[#E8E8EE] text-[#1D1D1F] border-0">
+              +XP 50
+            </Badge>
           </div>
+        </div>
 
-          {/* Mobile: Vertical Layout, Desktop: Two Column Layout */}
-          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 mt-4">
+        {/* Two Column Layout */}
+        <div className="px-6 lg:px-6">
+          <div className="grid grid-cols-2 gap-6 mt-4">
             {/* Image Upload */}
             <div>
               <h3 className="font-semibold text-[#1D1D1F] mb-4">Выберите свою работу</h3>
@@ -192,7 +196,7 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
               
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="battle-title" className="text-xs lg:text-sm font-medium">
+                  <Label htmlFor="battle-title" className="text-sm font-medium">
                     Название батла
                   </Label>
                   <Input
@@ -200,24 +204,24 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
                     placeholder="Батл #12345"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="mt-1.5 rounded-xl"
+                    className="mt-1.5 rounded-xl bg-[#E8E8E8] lg:bg-[#E8E8E8] border-0"
                     data-testid="input-battle-title"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-xs lg:text-sm font-medium">
+                  <Label className="text-sm font-medium">
                     Категория
                   </Label>
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="mt-1.5 rounded-xl" data-testid="select-battle-category">
+                    <SelectTrigger className="mt-1.5 rounded-xl border-0" data-testid="select-battle-category">
                       <SelectValue placeholder="Выберите категорию" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
                           <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-full ${cat.color}`} />
+                            <img src={cat.icon} alt={cat.label} className="w-4 h-4" />
                             {cat.label}
                           </div>
                         </SelectItem>
@@ -227,7 +231,7 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
                 </div>
                 
                 <div>
-                  <Label htmlFor="battle-description" className="text-xs lg:text-sm font-medium">
+                  <Label htmlFor="battle-description" className="text-sm font-medium">
                     Описание
                   </Label>
                   <Textarea
@@ -235,33 +239,31 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
                     placeholder="Опишите ваш батл..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="mt-1.5 min-h-[120px] rounded-xl resize-none"
+                    className="mt-1.5 min-h-[120px] rounded-xl resize-none bg-[#E8E8E8] lg:bg-[#E8E8E8] border-0"
                     data-testid="input-battle-description"
                   />
                 </div>
               </div>
             </div>
+            
+            <Button 
+              className="w-full mt-6 bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl disabled:opacity-50"
+              disabled={!isFormValid || createBattleMutation.isPending}
+              onClick={handleSubmit}
+              data-testid="button-create-battle"
+            >
+              {createBattleMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Создание...
+                </>
+              ) : (
+                "Создать батл"
+              )}
+            </Button>
           </div>
         </div>
-
-        {/* Bottom Button - Fixed at bottom for mobile */}
-        <div className="px-6 py-4 border-t lg:border-0 lg:px-0 lg:py-0 lg:mt-6">
-          <Button 
-            className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] rounded-xl disabled:opacity-50"
-            disabled={!isFormValid || createBattleMutation.isPending}
-            onClick={handleSubmit}
-            data-testid="button-create-battle"
-          >
-            {createBattleMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Создание...
-              </>
-            ) : (
-              "Создать батл"
-            )}
-          </Button>
-        </div>
+        <div className="px-6 lg:px-6 pb-6 lg:pb-6"></div>
       </DialogContent>
     </Dialog>
   );

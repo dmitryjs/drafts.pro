@@ -31,7 +31,7 @@ export default function TaskSubmitSuccessModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[400px] p-0 gap-0 bg-white">
-        <div className="p-8 text-center">
+        <div className="p-8 lg:p-8 text-center">
           <div className="flex justify-center mb-4">
             <div className="h-16 w-16 rounded-full bg-[#11D55D] flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-white" />

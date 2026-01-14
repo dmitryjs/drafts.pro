@@ -142,7 +142,7 @@ export default function TaskSubmitModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[520px] p-0 gap-0 bg-white">
-        <DialogHeader className="p-6 pb-4">
+        <DialogHeader className="p-6 lg:p-6 lg:pt-6 lg:pb-0 pb-4">
           <DialogTitle className="text-lg font-semibold text-[#1D1D1F]">
             Решение задачи
           </DialogTitle>
@@ -152,7 +152,7 @@ export default function TaskSubmitModal({
         </DialogHeader>
 
         {isEvaluating ? (
-          <div className="px-6 pb-6 flex flex-col items-center justify-center py-12">
+          <div className="px-6 lg:px-6 pb-6 lg:pb-6 flex flex-col items-center justify-center py-12">
             <div className="relative">
               <Loader2 className="h-12 w-12 animate-spin text-[#FF6030]" />
               <Bot className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#FF6030]" />
@@ -163,7 +163,7 @@ export default function TaskSubmitModal({
           </div>
         ) : (
           <>
-            <div className="px-6 pb-4">
+            <div className="px-6 lg:px-6 pb-4">
               <div className="flex items-center gap-2 mb-3 p-3 rounded-lg bg-blue-50 border border-blue-100">
                 <Bot className="h-5 w-5 text-blue-600 flex-shrink-0" />
                 <p className="text-sm text-blue-700">
@@ -176,7 +176,7 @@ export default function TaskSubmitModal({
               </p>
             </div>
 
-            <div className="px-6 pb-4">
+            <div className="px-6 lg:px-6 pb-4">
               <div className={cn(
                 "relative border rounded-xl bg-[#F9F9F9] p-4",
                 isOverLimit ? "border-red-500" : "border-border"
@@ -235,7 +235,7 @@ export default function TaskSubmitModal({
             />
 
             {/* Плашка "Проверка от ментора" - видна всем, но работает только для PRO */}
-            <div className="px-6 pb-4">
+            <div className="px-6 lg:px-6 pb-4">
               <div className="flex items-center justify-between p-4 rounded-xl bg-[#F9F9F9] border border-border">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -273,7 +273,7 @@ export default function TaskSubmitModal({
               </div>
             </div>
 
-            <div className="p-6 pt-2">
+            <div className="p-6 lg:p-6 pt-2">
               <Button
                 className="w-full bg-[#FF6030] hover:bg-[#E55525] text-white rounded-xl h-11"
                 onClick={handleSubmit}

@@ -240,7 +240,7 @@ export default function MainLayout({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-[200px]">
                     <DropdownMenuItem 
-                      className="cursor-pointer py-2.5"
+                      className="cursor-pointer py-2.5 focus:bg-[#E8E8E8] focus:text-foreground"
                       onClick={() => {
                         if (onCreateTask) onCreateTask();
                         else setIsTaskModalOpen(true);
@@ -257,7 +257,7 @@ export default function MainLayout({
                       Задача
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      className="cursor-pointer py-2.5"
+                      className="cursor-pointer py-2.5 focus:bg-[#E8E8E8] focus:text-foreground"
                       onClick={() => {
                         if (onCreateBattle) onCreateBattle();
                         else setIsBattleModalOpen(true);

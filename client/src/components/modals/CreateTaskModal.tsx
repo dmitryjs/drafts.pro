@@ -2,6 +2,11 @@ import { useState, useRef } from "react";
 import { X, Tag, Briefcase, Paperclip, Plus, ChevronLeft, ChevronRight, FileText, FileArchive } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import CategoryIcon3D from "@assets/icons/CategoryIcons_3D.svg";
+import CategoryIconCases from "@assets/icons/CategoryIcons_Cases.svg";
+import CategoryIconGraphic from "@assets/icons/CategoryIcons_Graphic.svg";
+import CategoryIconProducts from "@assets/icons/CategoryIcons_Products.svg";
+import CategoryIconUXUI from "@assets/icons/CategoryIcons_UXUI.svg";
 import {
   Dialog,
   DialogContent,
@@ -33,11 +38,11 @@ interface CreateTaskModalProps {
 }
 
 const categories = [
-  { value: "cases", label: "Кейсы", icon: "circle-red" },
-  { value: "product", label: "Продукты", icon: "circle-purple" },
-  { value: "uxui", label: "UX/UI", icon: "circle-pink" },
-  { value: "graphic", label: "Графический", icon: "circle-yellow" },
-  { value: "3d", label: "3D", icon: "circle-blue" },
+  { value: "cases", label: "Кейсы", icon: CategoryIconCases },
+  { value: "product", label: "Продукты", icon: CategoryIconProducts },
+  { value: "uxui", label: "UX/UI", icon: CategoryIconUXUI },
+  { value: "graphic", label: "Графический", icon: CategoryIconGraphic },
+  { value: "3d", label: "3D", icon: CategoryIcon3D },
 ];
 
 const levels = [
@@ -379,15 +384,15 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
     return <FileText className="h-12 w-12 text-muted-foreground" />;
   };
 
-  const buttonStyle = "bg-[#F0F0F0] hover:bg-[#E5E5E5] text-foreground border-0";
+  const buttonStyle = "hover:bg-[#E8E8E8] text-foreground border-0";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         hideCloseButton
-        className="max-w-4xl lg:h-[90vh] flex flex-col gap-0 p-0 max-h-[90vh]"
+        className="!max-w-4xl lg:!max-w-4xl lg:h-[90vh] flex flex-col gap-0 p-0 max-h-[90vh]"
       >
-        <DialogHeader className="px-6 py-4 border-b flex-row items-center justify-between gap-4">
+        <DialogHeader className="px-6 lg:px-6 py-4 lg:py-4 border-b flex-row items-center justify-between gap-4">
           <DialogTitle style={{ fontSize: "24px" }} className="font-semibold">Создать задачу</DialogTitle>
           <DialogClose asChild>
             <Button 
@@ -400,18 +405,18 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
           </DialogClose>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto p-6 space-y-6">
+        <div className="flex-1 overflow-auto p-6 lg:p-0 lg:px-6 space-y-6">
           {/* Category and Level selectors */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 lg:mt-5">
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={`flex-1 lg:w-40 ${buttonStyle}`} data-testid="select-category">
+              <SelectTrigger className={`w-40 flex-1 lg:w-40 lg:flex-none ${buttonStyle}`} data-testid="select-category">
                 <SelectValue placeholder="Категория" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
                     <div className="flex items-center gap-2">
-                      <div className={`w-2.5 h-2.5 rounded-full ${getCategoryDot(cat.value)}`} />
+                      <img src={cat.icon} alt={cat.label} className="w-4 h-4" />
                       {cat.label}
                     </div>
                   </SelectItem>
@@ -420,7 +425,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             </Select>
 
             <Select value={level} onValueChange={setLevel}>
-              <SelectTrigger className={`flex-1 lg:w-32 ${buttonStyle}`} data-testid="select-level">
+              <SelectTrigger className={`w-32 flex-1 lg:w-32 lg:flex-none ${buttonStyle}`} data-testid="select-level">
                 <SelectValue placeholder="Уровень" />
               </SelectTrigger>
               <SelectContent>
@@ -434,26 +439,41 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
           </div>
 
           {/* Title */}
-          <div className="space-y-2">
-            <Label className="text-xs lg:text-base">Название задачи</Label>
+          <Input
+            placeholder="Название задачи"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{ fontSize: "24px" }}
+            className="font-medium border-0 px-0 focus-visible:ring-0 bg-transparent h-auto py-2 hidden lg:block"
+            data-testid="input-task-title"
+          />
+          <div className="space-y-2 lg:hidden">
+            <Label className="text-xs">Название задачи</Label>
             <Input
               placeholder="Название задачи"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="font-medium lg:text-2xl text-lg border-0 px-0 focus-visible:ring-0 bg-transparent h-auto py-2"
-              data-testid="input-task-title"
+              className="font-medium text-lg border-0 px-0 focus-visible:ring-0 bg-transparent h-auto py-2"
+              data-testid="input-task-title-mobile"
             />
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <Label className="text-xs lg:text-base">Описание</Label>
+          <Textarea
+            placeholder="Опишите вашу задачу максимально подробно"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="min-h-[200px] resize-none border-0 px-0 focus-visible:ring-0 bg-transparent text-muted-foreground hidden lg:block"
+            data-testid="input-task-description"
+          />
+          <div className="space-y-2 lg:hidden">
+            <Label className="text-xs">Описание</Label>
             <Textarea
               placeholder="Опишите вашу задачу максимально подробно"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[200px] resize-none border-0 px-0 focus-visible:ring-0 bg-transparent text-muted-foreground"
-              data-testid="input-task-description"
+              data-testid="input-task-description-mobile"
             />
           </div>
 
@@ -518,7 +538,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
         </div>
 
         {/* Bottom toolbar */}
-        <div className="px-6 py-4 border-t flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white lg:bg-transparent sticky bottom-0">
+        <div className="px-6 lg:px-6 py-4 lg:py-4 border-t flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button size="sm" className={buttonStyle}>
               ОТКРЫТЬ
@@ -717,11 +737,10 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             />
           </div>
 
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
               onClick={handleSaveDraft}
-              className="order-2 lg:order-1"
               data-testid="button-save-draft"
             >
               Сохранить в черновик
@@ -729,7 +748,6 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             <Button 
               onClick={handleSubmit}
               disabled={!title || !category || !level}
-              className="order-1 lg:order-2"
               data-testid="button-create-task"
             >
               Создать задачу

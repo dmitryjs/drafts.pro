@@ -492,12 +492,12 @@ export default function Profile() {
       </motion.div>
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[480px] max-h-[90vh] flex flex-col gap-0 p-0">
-          <DialogHeader className="px-6 py-4 border-b">
+        <DialogContent className="sm:max-w-[480px] p-0">
+          <DialogHeader className="px-6 lg:px-6 pt-6 lg:pt-6">
             <DialogTitle>Редактировать профиль</DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="space-y-4 py-4 px-6 lg:px-6 lg:py-0">
             <div className="space-y-2">
               <Label className="text-xs lg:text-sm">Имя</Label>
               <Input
@@ -518,7 +518,7 @@ export default function Profile() {
               />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs lg:text-sm">Страна</Label>
                 <Select value={editCountry} onValueChange={setEditCountry}>
@@ -545,7 +545,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs lg:text-sm">Грейд</Label>
                 <Select value={editGrade} onValueChange={setEditGrade}>
@@ -612,9 +612,9 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-3 px-6 py-4 border-t lg:border-0">
+          <div className="flex gap-3 pt-2 px-6 lg:px-6 pb-6 lg:pb-6">
             <Button
-              className="flex-1 bg-[#FF6030] hover:bg-[#E5562B] text-white order-2 lg:order-1"
+              className="flex-1 bg-[#FF6030] hover:bg-[#E5562B] text-white"
               onClick={handleSave}
               disabled={saveProfileMutation.isPending}
               data-testid="button-save-profile"
@@ -630,7 +630,6 @@ export default function Profile() {
             </Button>
             <Button
               variant="outline"
-              className="order-1 lg:order-2"
               onClick={() => setIsEditModalOpen(false)}
               data-testid="button-cancel-edit"
             >

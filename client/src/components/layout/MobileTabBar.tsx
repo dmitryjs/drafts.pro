@@ -125,7 +125,7 @@ export default function MobileTabBar() {
                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg border border-border p-2 min-w-[140px] z-50">
                   <button
                     onClick={handleTaskClick}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#F4F4F5] transition-colors text-sm text-left"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#E8E8E8] transition-colors text-sm text-left"
                   >
                     <img 
                       src={MenuActivityIcon} 
@@ -139,7 +139,7 @@ export default function MobileTabBar() {
                   </button>
                   <button
                     onClick={handleBattleClick}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#F4F4F5] transition-colors text-sm text-left"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#E8E8E8] transition-colors text-sm text-left"
                   >
                     <img 
                       src={MenuBattleIcon} 

@@ -51,7 +51,8 @@ import {
   TrendingDown,
   Activity,
   Building2,
-  Upload
+  Upload,
+  GraduationCap
 } from "lucide-react";
 import {
   BarChart,
@@ -511,35 +512,95 @@ export default function Admin() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 max-w-3xl">
+          {/* Mobile: Horizontal Tabs */}
+          <TabsList className="grid w-full grid-cols-6 max-w-3xl lg:hidden">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Дашборд
+              <span className="hidden sm:inline">Дашборд</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Пользователи
+              <span className="hidden sm:inline">Пользователи</span>
             </TabsTrigger>
             <TabsTrigger value="tasks" className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4" />
-              Задачи
+              <span className="hidden sm:inline">Задачи</span>
             </TabsTrigger>
             <TabsTrigger value="battles" className="flex items-center gap-2">
               <Swords className="h-4 w-4" />
-              Батлы
+              <span className="hidden sm:inline">Батлы</span>
             </TabsTrigger>
             <TabsTrigger value="tests" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Тесты
+              <span className="hidden sm:inline">Тесты</span>
             </TabsTrigger>
             <TabsTrigger value="companies" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              Компании
+              <span className="hidden sm:inline">Компании</span>
             </TabsTrigger>
           </TabsList>
 
-          {/* Dashboard Tab */}
-          <TabsContent value="dashboard">
+          {/* Контент + сайдбар (на десктопе) */}
+          <div className="lg:flex lg:gap-6">
+            {/* Sidebar (desktop-only) */}
+            <aside className="hidden lg:block w-64 flex-shrink-0">
+              <TabsList className="flex flex-col h-auto w-full p-1 bg-transparent gap-1">
+                <TabsTrigger 
+                  value="dashboard" 
+                  className="w-full justify-start gap-3 h-10 px-3 data-[state=active]:bg-[#F4F4F5] data-[state=active]:text-[#1D1D1F]"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Дашборд
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="users" 
+                  className="w-full justify-start gap-3 h-10 px-3 data-[state=active]:bg-[#F4F4F5] data-[state=active]:text-[#1D1D1F]"
+                >
+                  <Users className="h-4 w-4" />
+                  Пользователи
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="tasks" 
+                  className="w-full justify-start gap-3 h-10 px-3 data-[state=active]:bg-[#F4F4F5] data-[state=active]:text-[#1D1D1F]"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Задачи
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="battles" 
+                  className="w-full justify-start gap-3 h-10 px-3 data-[state=active]:bg-[#F4F4F5] data-[state=active]:text-[#1D1D1F]"
+                >
+                  <Swords className="h-4 w-4" />
+                  Батлы
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="tests" 
+                  className="w-full justify-start gap-3 h-10 px-3 data-[state=active]:bg-[#F4F4F5] data-[state=active]:text-[#1D1D1F]"
+                >
+                  <FileText className="h-4 w-4" />
+                  Тесты
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="companies" 
+                  className="w-full justify-start gap-3 h-10 px-3 data-[state=active]:bg-[#F4F4F5] data-[state=active]:text-[#1D1D1F]"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Компании
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="mentor" 
+                  className="w-full justify-start gap-3 h-10 px-3 data-[state=active]:bg-[#F4F4F5] data-[state=active]:text-[#1D1D1F]"
+                >
+                  <GraduationCap className="h-4 w-4" />
+                  Кабинет ментора
+                </TabsTrigger>
+              </TabsList>
+            </aside>
+
+            {/* Основной контент (общий для мобилки и десктопа) */}
+            <div className="flex-1">
+              {/* Dashboard Tab */}
+              <TabsContent value="dashboard" className="mt-0 lg:mt-0">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -725,10 +786,10 @@ export default function Admin() {
                 </Card>
               </div>
             </motion.div>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Users Tab */}
-          <TabsContent value="users">
+              {/* Users Tab */}
+              <TabsContent value="users" className="mt-0">
             <Card>
               <CardHeader>
                 <CardTitle>Управление пользователями</CardTitle>
@@ -783,10 +844,10 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Tasks Tab */}
-          <TabsContent value="tasks">
+              {/* Tasks Tab */}
+              <TabsContent value="tasks" className="mt-0">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Управление задачами</CardTitle>
@@ -928,10 +989,10 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Battles Tab */}
-          <TabsContent value="battles">
+              {/* Battles Tab */}
+              <TabsContent value="battles" className="mt-0">
             <Card>
               <CardHeader>
                 <CardTitle>Управление батлами</CardTitle>
@@ -1000,10 +1061,10 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Tests Tab (renamed from Questions) */}
-          <TabsContent value="tests">
+              {/* Tests Tab (renamed from Questions) */}
+              <TabsContent value="tests" className="mt-0">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Управление тестами</CardTitle>
@@ -1225,10 +1286,10 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+              </TabsContent>
 
-          {/* Companies Tab */}
-          <TabsContent value="companies">
+              {/* Companies Tab */}
+              <TabsContent value="companies" className="mt-0">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -1419,7 +1480,40 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+            </TabsContent>
+
+            {/* Кабинет ментора Tab */}
+            <TabsContent value="mentor" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#1D1D1F]">Кабинет ментора</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Задачи от премиум подписчиков, требующие проверки от ментора
+                    </p>
+                  </div>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Задачи на проверку</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">
+                      <GraduationCap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Здесь будут отображаться задачи от премиум подписчиков</p>
+                      <p className="text-sm mt-2">Функционал в разработке</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              </TabsContent>
+            </div>
+          </div>
         </Tabs>
       </div>
 
