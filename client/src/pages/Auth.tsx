@@ -169,7 +169,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={otpSent}
-                    className="pl-10 rounded-xl h-11 sm:h-12 text-sm"
+                    className="pl-10 rounded-xl h-[50px] text-sm"
                     data-testid="input-email"
                   />
                 </div>
@@ -187,7 +187,7 @@ export default function Auth() {
                       placeholder="Введите код из email"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
-                      className="rounded-xl h-11 sm:h-12 text-sm"
+                      className="rounded-xl h-[50px] text-sm"
                       data-testid="input-otp"
                       autoFocus
                     />
