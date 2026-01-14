@@ -8,8 +8,7 @@ import { ArrowLeft, Loader2, Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useAuth as useSupabaseAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import authBgImage from "@assets/Авторизация баннер.png";
-import taglineImage from "@assets/tagline_text.png";
-import draftsLogoWhite from "@assets/draftslogo_1767278269094.png";
+import logoWhite from "@assets/Logo White.svg";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
@@ -96,24 +95,14 @@ export default function Auth() {
             backgroundRepeat: 'no-repeat',
           }}
         >
-          <div className="relative z-10 flex flex-col justify-between p-10 w-full">
+          <div className="relative z-10 flex flex-col justify-start p-10 w-full">
             {/* Logo */}
             <div>
               <img 
-                src={draftsLogoWhite} 
+                src={logoWhite} 
                 alt="Drafts" 
-                style={{ width: '160px', height: '16px', display: 'block' }}
+                style={{ width: '160px', height: 'auto', display: 'block' }}
                 className="block"
-              />
-            </div>
-            
-            {/* Tagline Image */}
-            <div className="mb-10">
-              <img 
-                src={taglineImage} 
-                alt="Место где дизайнеры развиваются" 
-                className="max-w-full h-auto"
-                style={{ maxWidth: '80%', display: 'block', position: 'relative', zIndex: 1 }}
               />
             </div>
           </div>
