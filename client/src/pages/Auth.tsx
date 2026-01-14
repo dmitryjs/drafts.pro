@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Eye, EyeOff, Mail, Lock } from "lucide-react";
-import { SiGoogle } from "react-icons/si";
 import { useAuth as useSupabaseAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import authBgImage from "@assets/Авторизация баннер.png";
@@ -75,38 +74,6 @@ export default function Auth() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    if (!supabase) {
-      setError("Supabase не настроен");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError("");
-
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-      
-      if (error) {
-        setError(error.message || "Ошибка входа через Google");
-        setIsSubmitting(false);
-      }
-      // Если успешно - редирект произойдет автоматически
-      // Не нужно setIsSubmitting(false) здесь, так как произойдет редирект
-    } catch (err: any) {
-      setError(err.message || "Ошибка входа через Google");
-      setIsSubmitting(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -126,15 +93,19 @@ export default function Auth() {
             backgroundImage: `url(${authBgImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
           }}
         >
           <div className="relative z-10 flex flex-col justify-between p-10 w-full">
             {/* Logo */}
-            <img 
-              src={draftsLogoWhite} 
-              alt="Drafts" 
-              style={{ width: '160px', height: '16px' }}
-            />
+            <div>
+              <img 
+                src={draftsLogoWhite} 
+                alt="Drafts" 
+                style={{ width: '160px', height: '16px', display: 'block' }}
+                className="block"
+              />
+            </div>
             
             {/* Tagline Image */}
             <div className="mb-10">
@@ -142,7 +113,7 @@ export default function Auth() {
                 src={taglineImage} 
                 alt="Место где дизайнеры развиваются" 
                 className="max-w-full h-auto"
-                style={{ maxWidth: '80%' }}
+                style={{ maxWidth: '80%', display: 'block', position: 'relative', zIndex: 1 }}
               />
             </div>
           </div>
@@ -200,7 +171,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={otpSent}
-                    className="pl-10 rounded-xl h-10 sm:h-11 text-sm"
+                    className="pl-10 rounded-xl h-11 sm:h-12 text-sm"
                     data-testid="input-email"
                   />
                 </div>
@@ -218,7 +189,7 @@ export default function Auth() {
                       placeholder="Введите код из email"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
-                      className="rounded-xl h-10 sm:h-11 text-sm"
+                      className="rounded-xl h-11 sm:h-12 text-sm"
                       data-testid="input-otp"
                       autoFocus
                     />
@@ -263,26 +234,6 @@ export default function Auth() {
               </Button>
             )}
 
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-muted-foreground">или</span>
-              </div>
-            </div>
-
-            {/* Google Auth Button */}
-            <Button 
-              variant="outline"
-              onClick={handleGoogleLogin}
-              className="w-full h-11 sm:h-12 rounded-xl gap-3 text-sm sm:text-base"
-              data-testid="button-google-login"
-            >
-              <SiGoogle className="h-4 w-4 sm:h-5 sm:w-5" />
-              Войти через Google
-            </Button>
 
           </motion.div>
         </div>
