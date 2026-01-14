@@ -95,7 +95,7 @@ export default function Auth() {
             backgroundRepeat: 'no-repeat',
           }}
         >
-          <div className="relative z-10 flex flex-col justify-start p-10 w-full">
+          <div className="relative z-10 flex flex-col justify-between p-10 w-full h-full">
             {/* Logo */}
             <div>
               <img 
@@ -104,6 +104,15 @@ export default function Auth() {
                 style={{ width: '160px', height: 'auto', display: 'block' }}
                 className="block"
               />
+            </div>
+            
+            {/* Tagline Text */}
+            <div style={{ paddingLeft: '50px', paddingBottom: '50px' }}>
+              <div className="text-white font-bold uppercase leading-tight" style={{ fontSize: 'clamp(24px, 4vw, 48px)' }}>
+                <div>МЕСТО ГДЕ</div>
+                <div>ДИЗАЙНЕРЫ</div>
+                <div>РАЗВИВАЮТСЯ</div>
+              </div>
             </div>
           </div>
         </div>
