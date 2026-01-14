@@ -95,7 +95,7 @@ export default function Auth() {
             backgroundRepeat: 'no-repeat',
           }}
         >
-          <div className="relative z-10 flex flex-col justify-between p-10 w-full h-full">
+          <div className="relative z-10 flex flex-col justify-start p-10 w-full">
             {/* Logo */}
             <div>
               <img 
@@ -104,15 +104,6 @@ export default function Auth() {
                 style={{ width: '160px', height: 'auto', display: 'block' }}
                 className="block"
               />
-            </div>
-            
-            {/* Tagline Text */}
-            <div style={{ paddingLeft: '50px', paddingBottom: '50px' }}>
-              <div className="text-white font-bold uppercase leading-tight" style={{ fontSize: 'clamp(24px, 4vw, 48px)' }}>
-                <div>МЕСТО ГДЕ</div>
-                <div>ДИЗАЙНЕРЫ</div>
-                <div>РАЗВИВАЮТСЯ</div>
-              </div>
             </div>
           </div>
         </div>
@@ -169,7 +160,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={otpSent}
-                    className="pl-10 rounded-xl h-[50px] text-sm"
+                    className="pl-10 rounded-xl !h-[50px] text-sm"
                     data-testid="input-email"
                   />
                 </div>
@@ -205,7 +196,7 @@ export default function Auth() {
               <Button 
                 type="submit"
                 disabled={isSubmitting || (otpSent && !otpCode)}
-                className="w-full h-11 sm:h-12 bg-[#2D2D2D] hover:bg-[#3D3D3D] text-white font-medium rounded-xl text-sm sm:text-base"
+                className="w-full !h-[50px] bg-[#2D2D2D] hover:bg-[#3D3D3D] text-white font-medium rounded-xl text-sm sm:text-base"
                 data-testid="button-submit"
               >
                 {isSubmitting ? (
