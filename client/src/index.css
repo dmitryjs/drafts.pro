@@ -68,7 +68,7 @@
   --sidebar-accent-border: hsl(0 0% 90%);
 
   /* Center content area */
-  --content-bg: 0 0% 98%;
+  --content-bg: 0 0% 98%; /* #FAFAFA */
 
   /* Charts */
   --chart-1: 271 91% 65%;

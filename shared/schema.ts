@@ -69,6 +69,7 @@ export const profiles = pgTable("profiles", {
   userId: integer("user_id").references(() => users.id),
   authUid: text("auth_uid").unique(),
   email: text("email").notNull(),
+  isPro: boolean("is_pro").default(false),
   username: text("username"),
   fullName: text("full_name"),
   avatarUrl: text("avatar_url"),

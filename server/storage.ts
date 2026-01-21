@@ -200,13 +200,13 @@ export class DatabaseStorage implements IStorage {
     let result = await db.select().from(tasks);
     
     if (filters?.category) {
-      result = result.filter(t => t.category === filters.category);
+      result = result.filter((t: Task) => t.category === filters.category);
     }
     if (filters?.level) {
-      result = result.filter(t => t.level === filters.level);
+      result = result.filter((t: Task) => t.level === filters.level);
     }
     if (filters?.status) {
-      result = result.filter(t => t.status === filters.status);
+      result = result.filter((t: Task) => t.status === filters.status);
     }
     
     return result;
@@ -274,10 +274,10 @@ export class DatabaseStorage implements IStorage {
     let result = await db.select().from(battles);
     
     if (filters?.status) {
-      result = result.filter(b => b.status === filters.status);
+      result = result.filter((b: Battle) => b.status === filters.status);
     }
     if (filters?.category) {
-      result = result.filter(b => b.category === filters.category);
+      result = result.filter((b: Battle) => b.category === filters.category);
     }
     
     return result;
@@ -359,8 +359,8 @@ export class DatabaseStorage implements IStorage {
 
   async updateBattleCommentCounts(commentId: number): Promise<void> {
     const votes = await db.select().from(battleCommentVotes).where(eq(battleCommentVotes.commentId, commentId));
-    const likes = votes.filter(v => v.value === 1).length;
-    const dislikes = votes.filter(v => v.value === -1).length;
+    const likes = votes.filter((v: BattleCommentVote) => v.value === 1).length;
+    const dislikes = votes.filter((v: BattleCommentVote) => v.value === -1).length;
     await db.update(battleComments).set({ likes, dislikes }).where(eq(battleComments.id, commentId));
   }
 
@@ -389,7 +389,7 @@ export class DatabaseStorage implements IStorage {
     let result = await db.select().from(mentors);
     
     if (filters?.isAvailable !== undefined) {
-      result = result.filter(m => m.isAvailable === filters.isAvailable);
+      result = result.filter((m: Mentor) => m.isAvailable === filters.isAvailable);
     }
     // For specialization, would need to check array contains
     
@@ -479,8 +479,8 @@ export class DatabaseStorage implements IStorage {
 
   async getTaskVoteCounts(taskId: number): Promise<{ likes: number; dislikes: number }> {
     const votes = await db.select().from(taskVotes).where(eq(taskVotes.taskId, taskId));
-    const likes = votes.filter(v => v.value === 1).length;
-    const dislikes = votes.filter(v => v.value === -1).length;
+    const likes = votes.filter((v: TaskVote) => v.value === 1).length;
+    const dislikes = votes.filter((v: TaskVote) => v.value === -1).length;
     return { likes, dislikes };
   }
 

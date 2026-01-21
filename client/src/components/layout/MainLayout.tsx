@@ -190,7 +190,7 @@ export default function MainLayout({
   );
 
   return (
-    <div className="min-h-screen bg-[#F9F9F9] flex overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAFA] flex overflow-x-hidden">
       {/* Left Sidebar - desktop */}
       <aside className="w-[238px] bg-white border-r border-border flex flex-col h-screen sticky top-0 hidden lg:flex">
         {/* Logo */}
@@ -486,8 +486,8 @@ export default function MainLayout({
 
         {/* Content */}
         <div className="flex-1 flex">
-          {/* Center Content - F9F9F9 background */}
-          <main className="flex-1 p-[15px] lg:p-6 overflow-x-hidden overflow-y-auto bg-[#F9F9F9] pb-24 lg:pb-6 pt-8 lg:pt-6">
+          {/* Center Content - FAFAFA background */}
+          <main className="flex-1 p-[15px] lg:p-6 overflow-x-hidden overflow-y-auto bg-[#FAFAFA] pb-24 lg:pb-6 pt-8 lg:pt-6">
             {children}
           </main>
 

@@ -69,6 +69,52 @@ export class SupabaseStorage {
     };
   }
 
+  private mapMentor(data: any): any {
+    return {
+      ...data,
+      userId: data.user_id,
+      fullName: data.full_name,
+      avatarUrl: data.avatar_url,
+      hourlyRate: data.hourly_rate,
+      reviewsCount: data.reviews_count,
+      sessionsCount: data.sessions_count,
+      isVerified: data.is_verified,
+      isAvailable: data.is_available,
+      socialLinks: data.social_links,
+      createdAt: data.created_at,
+    };
+  }
+
+  private mapMentorSlot(data: any): any {
+    return {
+      ...data,
+      mentorId: data.mentor_id,
+      durationMinutes: data.duration_minutes,
+      isBooked: data.is_booked,
+    };
+  }
+
+  private mapMentorBooking(data: any): any {
+    return {
+      ...data,
+      slotId: data.slot_id,
+      mentorId: data.mentor_id,
+      userId: data.user_id,
+      meetingUrl: data.meeting_url,
+      createdAt: data.created_at,
+    };
+  }
+
+  private mapMentorReview(data: any): any {
+    return {
+      ...data,
+      mentorId: data.mentor_id,
+      userId: data.user_id,
+      bookingId: data.booking_id,
+      createdAt: data.created_at,
+    };
+  }
+
   private async getOrCreateUserId(authUid: string, email?: string | null): Promise<number> {
     if (!supabaseServer) {
       throw new Error("Supabase not configured");
