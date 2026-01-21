@@ -69,14 +69,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Проверяем текущую сессию
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchOrCreateProfile(session.user);
+    const handleAuthCallback = async () => {
+      if (typeof window === "undefined") {
+        return;
       }
-      setIsLoading(false);
+
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+        const hasHashToken = url.hash.includes("access_token=");
+
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error("Error exchanging auth code:", error);
+          }
+          url.searchParams.delete("code");
+          url.searchParams.delete("type");
+          window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+        } else if (hasHashToken && supabase.auth.getSessionFromUrl) {
+          const { error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+          if (error) {
+            console.error("Error parsing auth session from URL:", error);
+          }
+          window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+        }
+      } catch (error) {
+        console.error("Error handling auth callback:", error);
+      }
+    };
+
+    handleAuthCallback().finally(() => {
+      // Проверяем текущую сессию
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchOrCreateProfile(session.user);
+        }
+        setIsLoading(false);
+      });
     });
 
     // Обрабатываем изменения состояния авторизации (включая OAuth callback)
