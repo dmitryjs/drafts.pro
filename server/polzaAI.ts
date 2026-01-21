@@ -1,9 +1,12 @@
 import OpenAI from "openai";
 
-const polzaAI = new OpenAI({
-  baseURL: "https://api.polza.ai/api/v1",
-  apiKey: process.env.POLZA_AI_API_KEY,
-});
+const polzaApiKey = process.env.POLZA_AI_API_KEY;
+const polzaAI = polzaApiKey
+  ? new OpenAI({
+      baseURL: "https://api.polza.ai/api/v1",
+      apiKey: polzaApiKey,
+    })
+  : null;
 
 export interface ResumeAnalysis {
   score: number;
@@ -28,6 +31,20 @@ export interface TestRecommendations {
 }
 
 export async function analyzeResume(resumeText: string, sphere: string): Promise<ResumeAnalysis> {
+  if (!polzaAI) {
+    console.warn("POLZA_AI_API_KEY is not set. Returning fallback resume analysis.");
+    return {
+      score: 70,
+      feedbackItems: [
+        {
+          title: "Анализ недоступен",
+          description: "AI проверка временно недоступна. Попробуйте позже.",
+          isPositive: false,
+        },
+      ],
+    };
+  }
+
   const sphereNames: Record<string, string> = {
     product: "Продакт дизайн",
     uxui: "UX/UI дизайн",
@@ -116,6 +133,20 @@ export async function evaluateFreeTextAnswers(
   sphere: string,
   answers: { questionId: string; question: string; answer: string; maxScore: number }[]
 ): Promise<FreeTextEvaluationResult> {
+  if (!polzaAI) {
+    console.warn("POLZA_AI_API_KEY is not set. Returning fallback text evaluation.");
+    return {
+      evaluations: answers.map(a => ({
+        questionId: a.questionId,
+        score: 0,
+        maxScore: a.maxScore,
+        feedback: "AI проверка временно недоступна.",
+      })),
+      totalScore: 0,
+      maxTotalScore: answers.reduce((sum, a) => sum + a.maxScore, 0),
+    };
+  }
+
   const sphereNames: Record<string, string> = {
     product: "Продакт дизайн",
     uxui: "UX/UI дизайн",
@@ -216,6 +247,15 @@ export async function generateTestRecommendations(
   incorrectTopics: string[],
   gibberishAnswers: string[] = []
 ): Promise<TestRecommendations> {
+  if (!polzaAI) {
+    console.warn("POLZA_AI_API_KEY is not set. Returning fallback recommendations.");
+    return {
+      overallFeedback: "AI рекомендации временно недоступны. Попробуйте позже.",
+      recommendations: [],
+      suggestedResources: [],
+    };
+  }
+
   const sphereNames: Record<string, string> = {
     product: "Продакт дизайн",
     uxui: "UX/UI дизайн",
@@ -315,6 +355,14 @@ export async function evaluateTaskSolution(
   taskDescription: string,
   userAnswer: string
 ): Promise<TaskSolutionEvaluation> {
+  if (!polzaAI) {
+    console.warn("POLZA_AI_API_KEY is not set. Returning fallback task evaluation.");
+    return {
+      isCorrect: false,
+      feedback: "AI проверка временно недоступна. Попробуйте позже.",
+    };
+  }
+
   const prompt = `Ты — опытный дизайн-ментор и преподаватель с 10+ годами опыта. Твоя задача — оценить ответ кандидата на дизайн-задачу.
 
 ЗАДАЧА:
