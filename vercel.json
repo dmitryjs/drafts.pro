@@ -14,7 +14,7 @@
   ],
   "functions": {
     "api/[...all].ts": {
-      "includeFiles": "server/**"
+      "includeFiles": "dist/server/**"
     }
   },
   "routes": [

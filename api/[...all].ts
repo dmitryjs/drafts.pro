@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import { createApp } from "../server/app";
+import { createRequire } from "module";
 
 export const config = {
   api: {
@@ -7,10 +7,17 @@ export const config = {
   },
 };
 
-let appPromise: ReturnType<typeof createApp> | null = null;
+type AppFactory = (options: { enableVite: boolean; enableStatic: boolean }) => Promise<{
+  app: (req: IncomingMessage, res: ServerResponse) => void;
+  httpServer: unknown;
+}>;
+
+const require = createRequire(import.meta.url);
+let appPromise: ReturnType<AppFactory> | null = null;
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   if (!appPromise) {
+    const { createApp } = require("../dist/server/app.cjs") as { createApp: AppFactory };
     appPromise = createApp({
       enableStatic: false,
       enableVite: false,
