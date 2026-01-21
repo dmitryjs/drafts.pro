@@ -35,7 +35,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import UserAvatar from "@/components/UserAvatar";
 import { getLevelInfo, XP_REWARDS } from "@shared/xp";
 import type { TaskDraft, Profile as ProfileType } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
+import { mapProfileRow, getProfileIdByAuthUid, mapTaskDraftRow } from "@/lib/supabase-helpers";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -121,23 +122,33 @@ export default function Profile() {
 
   // Get profile by authUid (Supabase user.id)
   const { data: profileData, isLoading: isLoadingProfile } = useQuery<ProfileType>({
-    queryKey: ["/api/profiles", user?.id],
+    queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user?.id) throw new Error("User not authenticated");
-      try {
-        const response = await apiRequest("GET", `/api/profiles/${user.id}`);
-        return response.json();
-      } catch (error: any) {
-        // If profile doesn't exist, create it
-        if (error.message?.includes("404")) {
-          const createResponse = await apiRequest("POST", "/api/profiles/upsert", {
-            authUid: user.id,
-            email: user.email || "",
-          });
-          return createResponse.json();
-        }
-        throw error;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("auth_uid", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        return mapProfileRow(data);
       }
+
+      const { data: created, error: createError } = await supabase
+        .from("profiles")
+        .insert({
+          auth_uid: user.id,
+          email: user.email || "",
+        })
+        .select("*")
+        .single();
+
+      if (createError) throw createError;
+
+      return mapProfileRow(created);
     },
     enabled: !!user?.id,
     retry: false,
@@ -166,11 +177,31 @@ export default function Profile() {
       if (!profileData?.id) {
         throw new Error("Профиль не загружен. Попробуйте обновить страницу.");
       }
-      const response = await apiRequest("PATCH", `/api/profiles/${profileData.id}`, data);
-      return response.json();
+      const payload: Record<string, any> = {};
+      if ((data as any).fullName !== undefined) payload.full_name = (data as any).fullName;
+      if ((data as any).bio !== undefined) payload.bio = (data as any).bio;
+      if ((data as any).company !== undefined) payload.company = (data as any).company;
+      if ((data as any).country !== undefined) payload.country = (data as any).country;
+      if ((data as any).city !== undefined) payload.city = (data as any).city;
+      if ((data as any).grade !== undefined) payload.grade = (data as any).grade;
+      if ((data as any).telegramUsername !== undefined) payload.telegram_username = (data as any).telegramUsername;
+      if ((data as any).behanceUrl !== undefined) payload.behance_url = (data as any).behanceUrl;
+      if ((data as any).dribbbleUrl !== undefined) payload.dribbble_url = (data as any).dribbbleUrl;
+      if ((data as any).avatarUrl !== undefined) payload.avatar_url = (data as any).avatarUrl;
+
+      const { data: updated, error } = await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("id", profileData.id)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      return mapProfileRow(updated);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
       toast({ title: "Профиль сохранён!" });
       setIsEditModalOpen(false);
     },
@@ -201,7 +232,22 @@ export default function Profile() {
   };
 
   const { data: drafts } = useQuery<TaskDraft[]>({
-    queryKey: ["/api/drafts"],
+    queryKey: ["drafts", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const profileId = await getProfileIdByAuthUid(user.id);
+      if (!profileId) return [];
+
+      const { data, error } = await supabase
+        .from("task_drafts")
+        .select("*")
+        .eq("profile_id", profileId);
+
+      if (error) throw error;
+
+      return (data || []).map(mapTaskDraftRow);
+    },
+    enabled: !!user?.id,
   });
 
   const draftsCount = drafts?.length || 0;

@@ -25,8 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-auth";
+import { getProfileIdByAuthUid } from "@/lib/supabase-helpers";
 
 interface CreateBattleModalProps {
   open: boolean;
@@ -48,23 +50,50 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
   const [category, setCategory] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const createBattleMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: string; theme: string }) => {
-      return apiRequest("POST", "/api/battles", {
-        ...data,
-        slug: data.title.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "") + "-" + Date.now(),
-        status: "moderation",
-      });
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const profileId = await getProfileIdByAuthUid(user.id);
+      if (!profileId) {
+        throw new Error("Профиль не найден");
+      }
+
+      const slugBase = data.title
+        .toLowerCase()
+        .replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .substring(0, 50);
+      const slug = `${slugBase}-${Date.now()}`;
+
+      const { error } = await supabase
+        .from("battles")
+        .insert({
+          slug,
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          theme: data.theme,
+          status: "moderation",
+          created_by: profileId,
+        });
+
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/battles"] });
+      queryClient.invalidateQueries({ queryKey: ["battles"] });
       toast({ title: "Батл отправлен на модерацию!" });
       onOpenChange(false);
       resetForm();
     },
-    onError: () => {
-      toast({ title: "Ошибка при создании батла", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Error creating battle:", error);
+      const errorMessage = error?.message || "Неизвестная ошибка";
+      toast({ title: "Ошибка при создании батла", description: errorMessage, variant: "destructive" });
     },
   });
 

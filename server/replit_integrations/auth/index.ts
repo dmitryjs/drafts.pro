@@ -9,6 +9,17 @@ export const isAdmin: RequestHandler = async (req, res, next) => {
   // Если Replit Auth не настроен, пропускаем проверку
   // Проверка админа будет на уровне роутов через email
   if (!process.env.REPL_ID) {
+    const user = req.user as any;
+    const email = user?.claims?.email;
+    const superAdmins = (process.env.SUPER_ADMIN_EMAILS || "galkindmitry27@gmail.com")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (!email || !superAdmins.includes(email)) {
+      return res.status(403).json({ message: "Forbidden: Admin access required" });
+    }
+
     return next();
   }
 

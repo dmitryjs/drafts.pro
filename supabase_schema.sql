@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   auth_uid TEXT UNIQUE,
   email TEXT NOT NULL,
+  is_pro BOOLEAN DEFAULT FALSE,
   username TEXT,
   full_name TEXT,
   avatar_url TEXT,
@@ -404,3 +405,219 @@ CREATE TABLE IF NOT EXISTS auth_users (
 -- ============================================
 -- Все таблицы созданы. Теперь можно использовать платформу.
 -- Проверьте таблицы в Supabase Dashboard → Table Editor
+
+-- ============================================
+-- 11. AUTH TRIGGERS & RLS (для прод-запуска)
+-- ============================================
+
+-- Helper: current user id from custom users table
+CREATE OR REPLACE FUNCTION public.current_user_id()
+RETURNS INTEGER
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT id FROM public.users WHERE auth_uid = auth.uid()
+$$;
+
+-- Auto-create users/profile on Supabase Auth sign-up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE new_user_id INTEGER;
+BEGIN
+  INSERT INTO public.users (email, auth_uid)
+  VALUES (NEW.email, NEW.id)
+  ON CONFLICT (auth_uid) DO UPDATE SET email = EXCLUDED.email
+  RETURNING id INTO new_user_id;
+
+  INSERT INTO public.profiles (user_id, auth_uid, email)
+  VALUES (new_user_id, NEW.id, NEW.email)
+  ON CONFLICT (auth_uid) DO UPDATE SET email = EXCLUDED.email, user_id = EXCLUDED.user_id;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Enable RLS
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_solutions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_drafts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE battles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE battle_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE battle_votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE battle_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE battle_comment_votes ENABLE ROW LEVEL SECURITY;
+
+-- Policies: users
+DROP POLICY IF EXISTS "Users can read own user row" ON users;
+CREATE POLICY "Users can read own user row"
+  ON users FOR SELECT
+  USING (auth_uid = auth.uid());
+
+DROP POLICY IF EXISTS "Users can insert own user row" ON users;
+CREATE POLICY "Users can insert own user row"
+  ON users FOR INSERT
+  WITH CHECK (auth_uid = auth.uid());
+
+-- Policies: profiles
+DROP POLICY IF EXISTS "Public can read profiles" ON profiles;
+CREATE POLICY "Public can read profiles"
+  ON profiles FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can insert own profile"
+  ON profiles FOR INSERT
+  WITH CHECK (auth_uid = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+CREATE POLICY "Users can update own profile"
+  ON profiles FOR UPDATE
+  USING (auth_uid = auth.uid());
+
+-- Policies: tasks
+DROP POLICY IF EXISTS "Public can read published tasks" ON tasks;
+CREATE POLICY "Public can read published tasks"
+  ON tasks FOR SELECT
+  USING (status = 'published' OR author_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can insert own tasks" ON tasks;
+CREATE POLICY "Users can insert own tasks"
+  ON tasks FOR INSERT
+  WITH CHECK (author_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can update own tasks" ON tasks;
+CREATE POLICY "Users can update own tasks"
+  ON tasks FOR UPDATE
+  USING (author_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can delete own tasks" ON tasks;
+CREATE POLICY "Users can delete own tasks"
+  ON tasks FOR DELETE
+  USING (author_id = public.current_user_id());
+
+-- Policies: task solutions
+DROP POLICY IF EXISTS "Users can read own task solutions" ON task_solutions;
+CREATE POLICY "Users can read own task solutions"
+  ON task_solutions FOR SELECT
+  USING (user_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can insert own task solutions" ON task_solutions;
+CREATE POLICY "Users can insert own task solutions"
+  ON task_solutions FOR INSERT
+  WITH CHECK (user_id = public.current_user_id());
+
+-- Policies: task votes
+DROP POLICY IF EXISTS "Users can read own task votes" ON task_votes;
+CREATE POLICY "Users can read own task votes"
+  ON task_votes FOR SELECT
+  USING (user_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can insert own task votes" ON task_votes;
+CREATE POLICY "Users can insert own task votes"
+  ON task_votes FOR INSERT
+  WITH CHECK (user_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can delete own task votes" ON task_votes;
+CREATE POLICY "Users can delete own task votes"
+  ON task_votes FOR DELETE
+  USING (user_id = public.current_user_id());
+
+-- Policies: task favorites
+DROP POLICY IF EXISTS "Users can read own task favorites" ON task_favorites;
+CREATE POLICY "Users can read own task favorites"
+  ON task_favorites FOR SELECT
+  USING (user_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can insert own task favorites" ON task_favorites;
+CREATE POLICY "Users can insert own task favorites"
+  ON task_favorites FOR INSERT
+  WITH CHECK (user_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can delete own task favorites" ON task_favorites;
+CREATE POLICY "Users can delete own task favorites"
+  ON task_favorites FOR DELETE
+  USING (user_id = public.current_user_id());
+
+-- Policies: task drafts
+DROP POLICY IF EXISTS "Users can manage own task drafts" ON task_drafts;
+CREATE POLICY "Users can manage own task drafts"
+  ON task_drafts FOR ALL
+  USING (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()))
+  WITH CHECK (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));
+
+-- Policies: battles (public read)
+DROP POLICY IF EXISTS "Public can read battles" ON battles;
+CREATE POLICY "Public can read battles"
+  ON battles FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Public can read battle entries" ON battle_entries;
+CREATE POLICY "Public can read battle entries"
+  ON battle_entries FOR SELECT
+  USING (true);
+
+-- Policies: battle votes
+DROP POLICY IF EXISTS "Users can read own battle votes" ON battle_votes;
+CREATE POLICY "Users can read own battle votes"
+  ON battle_votes FOR SELECT
+  USING (voter_id = public.current_user_id());
+
+DROP POLICY IF EXISTS "Users can insert own battle votes" ON battle_votes;
+CREATE POLICY "Users can insert own battle votes"
+  ON battle_votes FOR INSERT
+  WITH CHECK (voter_id = public.current_user_id());
+
+-- Policies: battle comments
+DROP POLICY IF EXISTS "Public can read battle comments" ON battle_comments;
+CREATE POLICY "Public can read battle comments"
+  ON battle_comments FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "Users can insert own battle comments" ON battle_comments;
+CREATE POLICY "Users can insert own battle comments"
+  ON battle_comments FOR INSERT
+  WITH CHECK (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can update own battle comments" ON battle_comments;
+CREATE POLICY "Users can update own battle comments"
+  ON battle_comments FOR UPDATE
+  USING (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can delete own battle comments" ON battle_comments;
+CREATE POLICY "Users can delete own battle comments"
+  ON battle_comments FOR DELETE
+  USING (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));
+
+-- Policies: battle comment votes
+DROP POLICY IF EXISTS "Users can read own battle comment votes" ON battle_comment_votes;
+CREATE POLICY "Users can read own battle comment votes"
+  ON battle_comment_votes FOR SELECT
+  USING (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can insert own battle comment votes" ON battle_comment_votes;
+CREATE POLICY "Users can insert own battle comment votes"
+  ON battle_comment_votes FOR INSERT
+  WITH CHECK (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can update own battle comment votes" ON battle_comment_votes;
+CREATE POLICY "Users can update own battle comment votes"
+  ON battle_comment_votes FOR UPDATE
+  USING (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));
+
+DROP POLICY IF EXISTS "Users can delete own battle comment votes" ON battle_comment_votes;
+CREATE POLICY "Users can delete own battle comment votes"
+  ON battle_comment_votes FOR DELETE
+  USING (profile_id = (SELECT id FROM profiles WHERE auth_uid = auth.uid()));

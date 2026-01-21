@@ -16,25 +16,61 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import MainLayout from "@/components/layout/MainLayout";
 import type { TaskDraft } from "@shared/schema";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-auth";
+import { getProfileIdByAuthUid, getUserIdByAuthUid, mapTaskDraftRow, mapTaskRow } from "@/lib/supabase-helpers";
 
 export default function Drafts() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data: drafts, isLoading } = useQuery<TaskDraft[]>({
-    queryKey: ["/api/drafts"],
+    queryKey: ["drafts", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const profileId = await getProfileIdByAuthUid(user.id);
+      if (!profileId) return [];
+
+      const { data, error } = await supabase
+        .from("task_drafts")
+        .select("*")
+        .eq("profile_id", profileId)
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(mapTaskDraftRow);
+    },
+    enabled: !!user?.id,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/drafts/${id}`);
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const profileId = await getProfileIdByAuthUid(user.id);
+      if (!profileId) {
+        throw new Error("Профиль не найден");
+      }
+
+      const { error } = await supabase
+        .from("task_drafts")
+        .delete()
+        .eq("id", id)
+        .eq("profile_id", profileId);
+
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
       toast({
         title: "Черновик удалён",
       });
@@ -51,21 +87,57 @@ export default function Drafts() {
 
   const publishMutation = useMutation({
     mutationFn: async (draft: TaskDraft) => {
-      const res = await apiRequest("POST", "/api/tasks", {
-        title: draft.title || "Без названия",
-        description: draft.description || "",
-        category: draft.category || "cases",
-        level: draft.level || "junior",
-        tags: draft.tags || [],
-        sphere: draft.spheres?.[0] || null,
-        status: "published",
-      });
-      return res.json();
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const authorId = await getUserIdByAuthUid(user.id);
+      if (!authorId) {
+        throw new Error("Пользователь не найден");
+      }
+
+      const title = draft.title || "Без названия";
+      const slugBase = title
+        .toLowerCase()
+        .replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .substring(0, 50);
+      const uniqueSuffix = `${Date.now().toString(36)}${Math.random().toString(36).substring(2, 5)}`;
+      const slug = `${slugBase}-${uniqueSuffix}`;
+
+      const { data: created, error } = await supabase
+        .from("tasks")
+        .insert({
+          slug,
+          title,
+          description: draft.description || "",
+          category: draft.category || "cases",
+          level: draft.level || "junior",
+          tags: draft.tags || null,
+          sphere: draft.spheres?.[0] || null,
+          status: "published",
+          author_id: authorId,
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      return mapTaskRow(created);
     },
     onSuccess: async (_, draft) => {
-      await apiRequest("DELETE", `/api/drafts/${draft.id}`);
-      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      if (user?.id) {
+        const profileId = await getProfileIdByAuthUid(user.id);
+        if (profileId) {
+          await supabase
+            .from("task_drafts")
+            .delete()
+            .eq("id", draft.id)
+            .eq("profile_id", profileId);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast({
         title: "Задача опубликована",
         description: "Черновик успешно опубликован как задача",

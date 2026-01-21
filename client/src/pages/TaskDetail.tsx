@@ -246,7 +246,8 @@ export default function TaskDetail() {
       return apiRequest("POST", `/api/tasks/${taskId}/favorite`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", slug] });
+      queryClient.invalidateQueries({ queryKey: ["task", slug] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast({ title: "Обновлено" });
     },
   });
@@ -256,7 +257,8 @@ export default function TaskDetail() {
       return apiRequest("POST", `/api/tasks/${taskId}/vote`, { value });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", slug] });
+      queryClient.invalidateQueries({ queryKey: ["task", slug] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 

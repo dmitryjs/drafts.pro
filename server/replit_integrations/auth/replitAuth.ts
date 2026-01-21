@@ -4,6 +4,7 @@ import { Strategy, type VerifyFunction } from "openid-client/passport";
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
+import { supabaseServer } from "../../supabase-server";
 import memoize from "memoizee";
 // connectPg больше не используется - используем memorystore
 import { authStorage } from "./storage";
@@ -134,9 +135,30 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // Если Replit Auth не настроен (локальная разработка с Supabase), 
   // пропускаем проверку - авторизация будет через Supabase на клиенте
   if (!process.env.REPL_ID) {
-    // Для Supabase авторизация происходит на клиенте
-    // На сервере мы просто пропускаем запрос
-    // Если нужна проверка авторизации, она будет на уровне роутов через Supabase токен
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!supabaseServer) {
+      return res.status(500).json({ message: "Supabase not configured" });
+    }
+
+    const { data, error } = await supabaseServer.auth.getUser(token);
+    if (error || !data?.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Совместимость с использованием req.user.claims.sub в роутинге
+    (req as any).user = {
+      claims: {
+        sub: data.user.id,
+        email: data.user.email,
+      },
+    };
+
     return next();
   }
 

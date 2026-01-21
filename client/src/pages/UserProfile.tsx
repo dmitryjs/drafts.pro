@@ -22,6 +22,14 @@ export default function UserProfile() {
 
   const { data, isLoading, error } = useQuery<PublicProfileData>({
     queryKey: ["/api/profiles", profileId, "public"],
+    queryFn: async () => {
+      if (!profileId) throw new Error("Profile ID is required");
+      const response = await fetch(`/api/profiles/${profileId}/public`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch profile: ${response.statusText}`);
+      }
+      return response.json();
+    },
     enabled: !!profileId,
   });
 

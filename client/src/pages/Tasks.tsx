@@ -253,7 +253,7 @@ export default function Tasks() {
       return apiRequest("POST", `/api/tasks/${taskId}/vote`, { value });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 
@@ -262,7 +262,7 @@ export default function Tasks() {
       return apiRequest("POST", `/api/tasks/${taskId}/favorite`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast({ title: "Обновлено" });
     },
   });

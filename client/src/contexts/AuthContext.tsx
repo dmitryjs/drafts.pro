@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { apiRequest } from '@/lib/queryClient';
+import { mapProfileRow } from "@/lib/supabase-helpers";
 
 interface Profile {
   id: number;
@@ -68,14 +68,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function fetchOrCreateProfile(user: User) {
     try {
-      const response = await apiRequest('POST', '/api/profiles/upsert', {
-        authUid: user.id,
-        email: user.email || '',
-      });
-      const profileData = await response.json();
-      setProfile(profileData);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("auth_uid", user.id)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setProfile(mapProfileRow(data));
+        return;
+      }
+
+      const { data: created, error: createError } = await supabase
+        .from("profiles")
+        .insert({
+          auth_uid: user.id,
+          email: user.email || "",
+        })
+        .select("*")
+        .single();
+
+      if (createError) {
+        throw createError;
+      }
+
+      setProfile(mapProfileRow(created));
     } catch (error) {
-      console.error('Error fetching/creating profile:', error);
+      console.error("Error fetching/creating profile:", error);
       // Не устанавливаем profile в null при ошибке, чтобы не сломать UI
     }
   }

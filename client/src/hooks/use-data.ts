@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
+import { mapTaskRow, mapBattleRow } from "@/lib/supabase-helpers";
 
 // --- Health Check ---
 export function useHealth() {
@@ -22,29 +24,41 @@ export function useHealth() {
 // --- Tasks (Задачи) ---
 export function useTasks(filters?: { category?: string; level?: string }) {
   return useQuery({
-    queryKey: [api.tasks.list.path, filters],
+    queryKey: ["tasks", filters],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (filters?.category) params.append("category", filters.category);
-      if (filters?.level) params.append("level", filters.level);
-      
-      const url = `${api.tasks.list.path}?${params.toString()}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch tasks");
-      return await res.json();
+      let query = supabase
+        .from("tasks")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (filters?.category) query = query.eq("category", filters.category);
+      if (filters?.level) query = query.eq("level", filters.level);
+
+      // По умолчанию показываем только опубликованные задачи
+      query = query.eq("status", "published");
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(mapTaskRow);
     },
   });
 }
 
 export function useTask(slug: string) {
   return useQuery({
-    queryKey: [api.tasks.get.path, slug],
+    queryKey: ["task", slug],
     queryFn: async () => {
-      const url = buildUrl(api.tasks.get.path, { slug });
-      const res = await fetch(url);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error("Failed to fetch task");
-      return await res.json();
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return null;
+
+      return mapTaskRow(data);
     },
     enabled: !!slug,
   });
@@ -53,29 +67,38 @@ export function useTask(slug: string) {
 // --- Battles (Дизайн батлы) ---
 export function useBattles(filters?: { status?: string; category?: string }) {
   return useQuery({
-    queryKey: [api.battles.list.path, filters],
+    queryKey: ["battles", filters],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (filters?.status) params.append("status", filters.status);
-      if (filters?.category) params.append("category", filters.category);
-      
-      const url = `${api.battles.list.path}?${params.toString()}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch battles");
-      return await res.json();
+      let query = supabase
+        .from("battles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (filters?.status) query = query.eq("status", filters.status);
+      if (filters?.category) query = query.eq("category", filters.category);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(mapBattleRow);
     },
   });
 }
 
 export function useBattle(slug: string) {
   return useQuery({
-    queryKey: [api.battles.get.path, slug],
+    queryKey: ["battle", slug],
     queryFn: async () => {
-      const url = buildUrl(api.battles.get.path, { slug });
-      const res = await fetch(url);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error("Failed to fetch battle");
-      return await res.json();
+      const { data, error } = await supabase
+        .from("battles")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return null;
+
+      return mapBattleRow(data);
     },
     enabled: !!slug,
   });

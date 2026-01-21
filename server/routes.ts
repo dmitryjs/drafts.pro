@@ -233,12 +233,14 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Профиль не найден" });
       }
 
-      // Get tasks created by this user (via userId link)
+      // Get tasks created by this profile (author_id = profile.id)
       let userTasks: any[] = [];
       let battleEntries: any[] = [];
-      if (profile.userId) {
-        userTasks = await storage.getTasksByAuthor(profile.userId);
-        battleEntries = await storage.getBattleEntriesByUser(profile.userId);
+      if (profile.id) {
+        userTasks = await storage.getTasksByAuthor(profile.id);
+        if (profile.userId) {
+          battleEntries = await storage.getBattleEntriesByUser(profile.userId);
+        }
       }
 
       // Get battles created by this profile
@@ -291,12 +293,36 @@ export async function registerRoutes(
     res.json(task);
   });
 
-  app.post(api.tasks.create.path, async (req, res) => {
+  app.post(api.tasks.create.path, isAuthenticated, async (req: any, res) => {
     try {
-      const { title, description, category, level, tags, sphere, authorId, status, attachments } = req.body;
+      const { title, description, category, level, tags, sphere, status, attachments } = req.body;
       
       if (!title || !description || !category || !level) {
         return res.status(400).json({ message: "Заполните все обязательные поля" });
+      }
+      
+      // Получаем userId из токена (Supabase) или сессии (Replit)
+      let userId: string | null = null;
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      } else if (req.query.userId) {
+        userId = req.query.userId as string;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Необходима авторизация" });
+      }
+
+      // Находим профиль по auth_uid
+      let profile = await storage.getProfileByAuthUid(userId);
+      if (!profile) {
+        // Создаём профиль, если его нет
+        const userEmail = req.user?.claims?.email || "";
+        profile = await storage.upsertProfile(userId, userEmail);
+      }
+
+      if (!profile.id) {
+        return res.status(500).json({ message: "Ошибка: профиль не найден" });
       }
       
       // Generate slug from title
@@ -316,20 +342,20 @@ export async function registerRoutes(
         level,
         tags: tags || null,
         sphere: sphere || null,
-        authorId: authorId || null,
+        authorId: profile.id, // Автоматически устанавливаем authorId из профиля
         status: status || 'published',
         attachments: attachments || null,
       });
       res.status(201).json(task);
-    } catch (err) {
-      console.error('Error creating task:', err);
+    } catch (err: any) {
+      console.error("Error creating task:", err);
       if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
           field: err.errors[0].path.join('.'),
         });
       }
-      res.status(500).json({ message: "Ошибка при создании задачи" });
+      res.status(500).json({ message: err.message || "Ошибка при создании задачи" });
     }
   });
 
@@ -750,10 +776,38 @@ export async function registerRoutes(
     res.json(battle);
   });
 
-  app.post(api.battles.create.path, async (req, res) => {
+  app.post(api.battles.create.path, isAuthenticated, async (req: any, res) => {
     try {
+      // Получаем userId из токена (Supabase) или сессии (Replit)
+      let userId: string | null = null;
+      if (req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      } else if (req.query.userId) {
+        userId = req.query.userId as string;
+      }
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Необходима авторизация" });
+      }
+
+      // Находим профиль по auth_uid
+      let profile = await storage.getProfileByAuthUid(userId);
+      if (!profile) {
+        // Создаём профиль, если его нет
+        const userEmail = req.user?.claims?.email || "";
+        profile = await storage.upsertProfile(userId, userEmail);
+      }
+
+      if (!profile.id) {
+        return res.status(500).json({ message: "Ошибка: профиль не найден" });
+      }
+
+      // Парсим input и добавляем created_by
       const input = api.battles.create.input.parse(req.body);
-      const battle = await storage.createBattle(input);
+      const battle = await storage.createBattle({
+        ...input,
+        createdBy: profile.id,
+      });
       res.status(201).json(battle);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -762,7 +816,8 @@ export async function registerRoutes(
           field: err.errors[0].path.join('.'),
         });
       }
-      throw err;
+      console.error('Error creating battle:', err);
+      res.status(500).json({ message: "Ошибка при создании батла" });
     }
   });
 
@@ -1167,8 +1222,11 @@ export async function registerRoutes(
       // Проверяем PRO подписку из базы данных
       // Также проверяем email для супер админа (автоматически PRO)
       const userEmail = profile?.email || null;
-      const SUPER_ADMIN_EMAILS = ["galkindmitry27@gmail.com"];
-      const isSuperAdmin = userEmail && SUPER_ADMIN_EMAILS.includes(userEmail);
+      const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || "galkindmitry27@gmail.com")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const isSuperAdmin = userEmail && superAdminEmails.includes(userEmail);
       
       // PRO статус: либо из базы данных (is_pro), либо супер админ
       const isPro = profile?.isPro || isSuperAdmin || false;
@@ -1228,10 +1286,13 @@ export async function registerRoutes(
       const email = userEmail || profile?.email;
       
       // Super admin email list
-      const SUPER_ADMIN_EMAILS = ["galkindmitry27@gmail.com"];
+      const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || "galkindmitry27@gmail.com")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
       
       // Check if user is super admin by email
-      const isSuperAdmin = email && SUPER_ADMIN_EMAILS.includes(email);
+      const isSuperAdmin = email && superAdminEmails.includes(email);
       
       // Also check database admin status (for Replit Auth users)
       let isUserAdmin = false;

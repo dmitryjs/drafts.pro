@@ -23,7 +23,8 @@ import UserAvatar from "@/components/UserAvatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
+import { getProfileIdByAuthUid, getUserIdByAuthUid } from "@/lib/supabase-helpers";
 import type { BattleComment, Profile } from "@shared/schema";
 
 type BattlePhase = "waiting" | "moderation" | "voting" | "completed";
@@ -221,23 +222,46 @@ export default function BattleDetail() {
   // Mock battle ID for now (in real app, would get from battle data)
   const battleId = battle?.id || 1;
 
-  // Fetch comments from API
+  // Fetch comments from Supabase
   const { data: apiComments = [] } = useQuery<BattleComment[]>({
-    queryKey: ["/api/battles", battleId, "comments"],
+    queryKey: ["battle-comments", battleId],
     queryFn: async () => {
-      const res = await fetch(`/api/battles/${battleId}/comments`);
-      if (!res.ok) return [];
-      return res.json();
+      const { data, error } = await supabase
+        .from("battle_comments")
+        .select("*")
+        .eq("battle_id", battleId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((row) => ({
+        ...row,
+        battleId: row.battle_id,
+        profileId: row.profile_id,
+        createdAt: row.created_at,
+      }));
     },
   });
 
   // Check if user has already voted
   const { data: voteStatus } = useQuery<{ hasVoted: boolean }>({
-    queryKey: ["/api/battles", battleId, "vote"],
+    queryKey: ["battle-vote-status", battleId, user?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/battles/${battleId}/vote`);
-      if (!res.ok) return { hasVoted: false };
-      return res.json();
+      if (!user?.id) return { hasVoted: false };
+
+      const userId = await getUserIdByAuthUid(user.id);
+      if (!userId) return { hasVoted: false };
+
+      const { data, error } = await supabase
+        .from("battle_votes")
+        .select("id")
+        .eq("battle_id", battleId)
+        .eq("voter_id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return { hasVoted: !!data };
     },
     enabled: !!user,
   });
@@ -247,10 +271,31 @@ export default function BattleDetail() {
   // Create comment mutation
   const createCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      return apiRequest("POST", `/api/battles/${battleId}/comments`, { content });
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const profileId = await getProfileIdByAuthUid(user.id);
+      if (!profileId) {
+        throw new Error("Профиль не найден");
+      }
+
+      const { data, error } = await supabase
+        .from("battle_comments")
+        .insert({
+          battle_id: battleId,
+          profile_id: profileId,
+          content,
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/battles", battleId, "comments"] });
+      queryClient.invalidateQueries({ queryKey: ["battle-comments", battleId] });
       setCommentText("");
       toast({ title: "Комментарий добавлен" });
     },
@@ -262,20 +307,100 @@ export default function BattleDetail() {
   // Vote on comment mutation
   const voteCommentMutation = useMutation({
     mutationFn: async ({ commentId, value }: { commentId: number; value: 1 | -1 }) => {
-      return apiRequest("POST", `/api/battle-comments/${commentId}/vote`, { value });
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const profileId = await getProfileIdByAuthUid(user.id);
+      if (!profileId) {
+        throw new Error("Профиль не найден");
+      }
+
+      const { data: currentVote, error: voteError } = await supabase
+        .from("battle_comment_votes")
+        .select("value")
+        .eq("comment_id", commentId)
+        .eq("profile_id", profileId)
+        .maybeSingle();
+
+      if (voteError) throw voteError;
+
+      const { data: commentRow, error: commentError } = await supabase
+        .from("battle_comments")
+        .select("likes,dislikes")
+        .eq("id", commentId)
+        .maybeSingle();
+
+      if (commentError) throw commentError;
+
+      let likes = commentRow?.likes ?? 0;
+      let dislikes = commentRow?.dislikes ?? 0;
+
+      if (currentVote?.value === value) {
+        if (value === 1) likes = Math.max(0, likes - 1);
+        if (value === -1) dislikes = Math.max(0, dislikes - 1);
+
+        const { error: deleteError } = await supabase
+          .from("battle_comment_votes")
+          .delete()
+          .eq("comment_id", commentId)
+          .eq("profile_id", profileId);
+
+        if (deleteError) throw deleteError;
+      } else {
+        if (currentVote?.value === 1) likes = Math.max(0, likes - 1);
+        if (currentVote?.value === -1) dislikes = Math.max(0, dislikes - 1);
+
+        if (value === 1) likes += 1;
+        if (value === -1) dislikes += 1;
+
+        const { error: upsertError } = await supabase
+          .from("battle_comment_votes")
+          .upsert({
+            comment_id: commentId,
+            profile_id: profileId,
+            value,
+          }, { onConflict: "comment_id,profile_id" });
+
+        if (upsertError) throw upsertError;
+      }
+
+      const { error: updateError } = await supabase
+        .from("battle_comments")
+        .update({ likes, dislikes })
+        .eq("id", commentId);
+
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/battles", battleId, "comments"] });
+      queryClient.invalidateQueries({ queryKey: ["battle-comments", battleId] });
     },
   });
 
   // Vote on battle mutation
   const voteBattleMutation = useMutation({
     mutationFn: async (entryId: number) => {
-      return apiRequest("POST", `/api/battles/${battleId}/vote`, { entryId });
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const userId = await getUserIdByAuthUid(user.id);
+      if (!userId) {
+        throw new Error("Пользователь не найден");
+      }
+
+      const { error: insertError } = await supabase
+        .from("battle_votes")
+        .insert({
+          battle_id: battleId,
+          entry_id: entryId,
+          voter_id: userId,
+        });
+
+      if (insertError) throw insertError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/battles", battleId, "vote"] });
+      queryClient.invalidateQueries({ queryKey: ["battle-vote-status", battleId, user?.id] });
       toast({ title: "Голос засчитан!", description: "Вы получили 5 XP" });
     },
     onError: (err: any) => {

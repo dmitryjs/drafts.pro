@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { X, Tag, Briefcase, Paperclip, Plus, ChevronLeft, ChevronRight, FileText, FileArchive } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import CategoryIcon3D from "@assets/icons/CategoryIcons_3D.svg";
 import CategoryIconCases from "@assets/icons/CategoryIcons_Cases.svg";
 import CategoryIconGraphic from "@assets/icons/CategoryIcons_Graphic.svg";
@@ -31,6 +31,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-auth";
+import { getProfileIdByAuthUid, getUserIdByAuthUid, mapTaskRow, mapTaskDraftRow } from "@/lib/supabase-helpers";
 
 interface CreateTaskModalProps {
   open: boolean;
@@ -93,6 +96,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
   
   const [category, setCategory] = useState("");
   const [level, setLevel] = useState("");
@@ -115,11 +119,35 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
       tags?: string[];
       spheres?: string[];
     }) => {
-      const res = await apiRequest("POST", "/api/drafts", data);
-      return res.json();
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const profileId = await getProfileIdByAuthUid(user.id);
+      if (!profileId) {
+        throw new Error("Профиль не найден");
+      }
+
+      const { data: created, error } = await supabase
+        .from("task_drafts")
+        .insert({
+          profile_id: profileId,
+          title: data.title || null,
+          description: data.description || null,
+          category: data.category || null,
+          level: data.level || null,
+          tags: data.tags || null,
+          spheres: data.spheres || null,
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      return mapTaskDraftRow(created);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["drafts"] });
       toast({
         title: "Черновик сохранён",
         description: "Вы можете найти его в разделе «Черновики» в профиле",
@@ -145,11 +173,45 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
       tags?: string[];
       sphere?: string;
     }) => {
-      const res = await apiRequest("POST", "/api/tasks", data);
-      return res.json();
+      if (!user?.id) {
+        throw new Error("Необходима авторизация");
+      }
+
+      const authorId = await getUserIdByAuthUid(user.id);
+      if (!authorId) {
+        throw new Error("Пользователь не найден");
+      }
+
+      const slugBase = data.title
+        .toLowerCase()
+        .replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .substring(0, 50);
+      const uniqueSuffix = `${Date.now().toString(36)}${Math.random().toString(36).substring(2, 5)}`;
+      const slug = `${slugBase}-${uniqueSuffix}`;
+
+      const { data: created, error } = await supabase
+        .from("tasks")
+        .insert({
+          slug,
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          level: data.level,
+          tags: data.tags || null,
+          sphere: data.sphere || null,
+          status: "published",
+          author_id: authorId,
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      return mapTaskRow(created);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast({
         title: "Задача создана",
         description: "Ваша задача успешно опубликована",
