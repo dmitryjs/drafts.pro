@@ -47,7 +47,7 @@ export function mapBattleRow(data: any) {
   };
 }
 
-export async function getUserIdByAuthUid(authUid: string): Promise<number | null> {
+export async function getUserIdByAuthUid(authUid: string, email?: string | null): Promise<number | null> {
   const { data, error } = await supabase
     .from("users")
     .select("id")
@@ -59,10 +59,26 @@ export async function getUserIdByAuthUid(authUid: string): Promise<number | null
     return null;
   }
 
-  return data?.id ?? null;
+  if (data?.id) {
+    return data.id;
+  }
+
+  const fallbackEmail = email || (await supabase.auth.getUser()).data.user?.email || "";
+  const { data: created, error: createError } = await supabase
+    .from("users")
+    .insert({ auth_uid: authUid, email: fallbackEmail })
+    .select("id")
+    .single();
+
+  if (createError) {
+    console.error("Failed to create users row:", createError);
+    return null;
+  }
+
+  return created?.id ?? null;
 }
 
-export async function getProfileIdByAuthUid(authUid: string): Promise<number | null> {
+export async function getProfileIdByAuthUid(authUid: string, email?: string | null): Promise<number | null> {
   const { data, error } = await supabase
     .from("profiles")
     .select("id")
@@ -74,5 +90,21 @@ export async function getProfileIdByAuthUid(authUid: string): Promise<number | n
     return null;
   }
 
-  return data?.id ?? null;
+  if (data?.id) {
+    return data.id;
+  }
+
+  const fallbackEmail = email || (await supabase.auth.getUser()).data.user?.email || "";
+  const { data: created, error: createError } = await supabase
+    .from("profiles")
+    .insert({ auth_uid: authUid, email: fallbackEmail })
+    .select("id")
+    .single();
+
+  if (createError) {
+    console.error("Failed to create profiles row:", createError);
+    return null;
+  }
+
+  return created?.id ?? null;
 }

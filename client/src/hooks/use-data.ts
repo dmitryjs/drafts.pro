@@ -26,6 +26,10 @@ export function useTasks(filters?: { category?: string; level?: string }) {
   return useQuery({
     queryKey: ["tasks", filters],
     queryFn: async () => {
+      const timeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Tasks request timeout")), 6000);
+      });
+
       let query = supabase
         .from("tasks")
         .select("*")
@@ -37,7 +41,7 @@ export function useTasks(filters?: { category?: string; level?: string }) {
       // По умолчанию показываем только опубликованные задачи
       query = query.eq("status", "published");
 
-      const { data, error } = await query;
+      const { data, error } = await Promise.race([query, timeout]);
       if (error) throw error;
 
       return (data || []).map(mapTaskRow);

@@ -123,7 +123,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
         throw new Error("Необходима авторизация");
       }
 
-      const profileId = await getProfileIdByAuthUid(user.id);
+      const profileId = await getProfileIdByAuthUid(user.id, user.email);
       if (!profileId) {
         throw new Error("Профиль не найден");
       }
@@ -177,7 +177,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
         throw new Error("Необходима авторизация");
       }
 
-      const authorId = await getUserIdByAuthUid(user.id);
+      const authorId = await getUserIdByAuthUid(user.id, user.email);
       if (!authorId) {
         throw new Error("Пользователь не найден");
       }
