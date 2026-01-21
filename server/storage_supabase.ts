@@ -1285,6 +1285,213 @@ export class SupabaseStorage {
   }
 
   // ============================================
+  // MENTORS
+  // ============================================
+
+  async getMentors(filters?: { specialization?: string; isAvailable?: boolean }): Promise<any[]> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+
+    let query = supabaseServer.from("mentors").select("*");
+    if (filters?.isAvailable !== undefined) {
+      query = query.eq("is_available", filters.isAvailable);
+    }
+    if (filters?.specialization) {
+      query = query.contains("specializations", [filters.specialization]);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
+    if (error) {
+      console.error("Error getting mentors:", error);
+      throw error;
+    }
+    return (data || []).map((mentor) => this.mapMentor(mentor));
+  }
+
+  async getMentorBySlug(slug: string): Promise<any | undefined> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const { data, error } = await supabaseServer
+      .from("mentors")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error && error.code !== "PGRST116") {
+      console.error("Error getting mentor by slug:", error);
+      throw error;
+    }
+    return data ? this.mapMentor(data) : undefined;
+  }
+
+  async createMentor(mentor: any): Promise<any> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const payload = {
+      user_id: mentor.userId,
+      slug: mentor.slug,
+      full_name: mentor.fullName,
+      avatar_url: mentor.avatarUrl ?? null,
+      title: mentor.title,
+      company: mentor.company ?? null,
+      specializations: mentor.specializations ?? null,
+      bio: mentor.bio ?? null,
+      experience: mentor.experience ?? null,
+      hourly_rate: mentor.hourlyRate ?? null,
+      rating: mentor.rating ?? null,
+      reviews_count: mentor.reviewsCount ?? null,
+      sessions_count: mentor.sessionsCount ?? null,
+      is_verified: mentor.isVerified ?? null,
+      is_available: mentor.isAvailable ?? null,
+      languages: mentor.languages ?? null,
+      social_links: mentor.socialLinks ?? null,
+    };
+    const { data, error } = await supabaseServer
+      .from("mentors")
+      .insert(payload)
+      .select("*")
+      .single();
+    if (error) {
+      console.error("Error creating mentor:", error);
+      throw error;
+    }
+    return this.mapMentor(data);
+  }
+
+  // ============================================
+  // MENTOR SLOTS
+  // ============================================
+
+  async getMentorSlots(mentorId: number): Promise<any[]> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const { data, error } = await supabaseServer
+      .from("mentor_slots")
+      .select("*")
+      .eq("mentor_id", mentorId)
+      .order("date", { ascending: true });
+    if (error) {
+      console.error("Error getting mentor slots:", error);
+      throw error;
+    }
+    return (data || []).map((slot) => this.mapMentorSlot(slot));
+  }
+
+  async createMentorSlot(slot: any): Promise<any> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const payload = {
+      mentor_id: slot.mentorId,
+      date: slot.date,
+      duration_minutes: slot.durationMinutes ?? null,
+      is_booked: slot.isBooked ?? null,
+      price: slot.price ?? null,
+    };
+    const { data, error } = await supabaseServer
+      .from("mentor_slots")
+      .insert(payload)
+      .select("*")
+      .single();
+    if (error) {
+      console.error("Error creating mentor slot:", error);
+      throw error;
+    }
+    return this.mapMentorSlot(data);
+  }
+
+  // ============================================
+  // BOOKINGS
+  // ============================================
+
+  async getUserBookings(userId: number): Promise<any[]> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const { data, error } = await supabaseServer
+      .from("mentor_bookings")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("Error getting mentor bookings:", error);
+      throw error;
+    }
+    return (data || []).map((booking) => this.mapMentorBooking(booking));
+  }
+
+  async createBooking(booking: any): Promise<any> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const payload = {
+      slot_id: booking.slotId,
+      mentor_id: booking.mentorId,
+      user_id: booking.userId,
+      topic: booking.topic ?? null,
+      notes: booking.notes ?? null,
+      status: booking.status ?? null,
+      meeting_url: booking.meetingUrl ?? null,
+    };
+    const { data, error } = await supabaseServer
+      .from("mentor_bookings")
+      .insert(payload)
+      .select("*")
+      .single();
+    if (error) {
+      console.error("Error creating mentor booking:", error);
+      throw error;
+    }
+    return this.mapMentorBooking(data);
+  }
+
+  // ============================================
+  // REVIEWS
+  // ============================================
+
+  async getMentorReviews(mentorId: number): Promise<any[]> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const { data, error } = await supabaseServer
+      .from("mentor_reviews")
+      .select("*")
+      .eq("mentor_id", mentorId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("Error getting mentor reviews:", error);
+      throw error;
+    }
+    return (data || []).map((review) => this.mapMentorReview(review));
+  }
+
+  async createReview(review: any): Promise<any> {
+    if (!supabaseServer) {
+      throw new Error("Supabase not configured");
+    }
+    const payload = {
+      mentor_id: review.mentorId,
+      user_id: review.userId,
+      booking_id: review.bookingId ?? null,
+      rating: review.rating,
+      comment: review.comment ?? null,
+    };
+    const { data, error } = await supabaseServer
+      .from("mentor_reviews")
+      .insert(payload)
+      .select("*")
+      .single();
+    if (error) {
+      console.error("Error creating mentor review:", error);
+      throw error;
+    }
+    return this.mapMentorReview(data);
+  }
+
+  // ============================================
   // COMPANIES
   // ============================================
 
@@ -1447,15 +1654,6 @@ export class SupabaseStorage {
       console.error("Error deleting assessment question:", error);
       throw error;
     }
-  }
-
-  // ============================================
-  // ASSESSMENT QUESTIONS (заглушки)
-  // ============================================
-
-  async getAssessmentQuestions(_specialization: string): Promise<any[]> {
-    // Временно возвращаем пустой массив
-    return [];
   }
 
   // Добавьте другие методы как заглушки по необходимости
