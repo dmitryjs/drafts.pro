@@ -12,6 +12,11 @@
       "use": "@vercel/node"
     }
   ],
+  "functions": {
+    "api/[...all].ts": {
+      "includeFiles": "server/**"
+    }
+  },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/[...all].ts" },
     { "handle": "filesystem" },
