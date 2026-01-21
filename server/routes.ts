@@ -1253,6 +1253,10 @@ export async function registerRoutes(
       if (req.query.userId) {
         userId = req.query.userId as string;
       }
+
+      if (req.query.email) {
+        userEmail = String(req.query.email);
+      }
       
       // Проверяем заголовок Authorization (Supabase токен)
       const authHeader = req.headers.authorization;

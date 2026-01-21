@@ -244,7 +244,7 @@ export default function Tasks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  const { data: apiTasks, isLoading } = useTasks({
+  const { data: apiTasks, isLoading, isError } = useTasks({
     category: selectedCategory !== "all" ? selectedCategory : undefined,
   });
 
@@ -288,6 +288,7 @@ export default function Tasks() {
   };
 
   const tasks = apiTasks?.length ? apiTasks : mockTasks;
+  const isLoadingTasks = isLoading && !isError;
 
   let filteredTasks = tasks.filter((task: any) => {
     if (selectedCategory !== "all" && task.category !== selectedCategory) return false;
@@ -361,7 +362,7 @@ export default function Tasks() {
               className={cn(
                 "h-11 lg:h-auto lg:px-4 lg:py-2 px-4 py-3 rounded-full text-sm lg:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-2",
                 isActive 
-                  ? "bg-[#141416] text-white"
+                  ? "bg-[#E8E8E8] text-[#1D1D1F]"
                   : "bg-[#E8E8E8] text-[#1D1D1F] hover:bg-[#DCDCE4]"
               )}
               data-testid={`filter-category-${cat.id}`}
@@ -470,7 +471,7 @@ export default function Tasks() {
 
       {/* Tasks Grid - 2 columns on desktop, newsfeed on mobile */}
       <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 -mx-[15px] px-[15px] lg:mx-0 lg:px-0">
-        {isLoading ? (
+        {isLoadingTasks ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-48 bg-white animate-pulse rounded-xl" />
           ))

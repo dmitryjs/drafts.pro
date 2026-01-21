@@ -100,15 +100,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     handleAuthCallback().finally(() => {
-      // Проверяем текущую сессию
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchOrCreateProfile(session.user);
-        }
-        setIsLoading(false);
+      const timeout = new Promise<{ data: { session: Session | null } }>((resolve) => {
+        setTimeout(() => resolve({ data: { session: null } }), 5000);
       });
+
+      Promise.race([supabase.auth.getSession(), timeout])
+        .then(({ data: { session } }) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            fetchOrCreateProfile(session.user);
+          }
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     });
 
     // Обрабатываем изменения состояния авторизации (включая OAuth callback)

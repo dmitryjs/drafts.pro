@@ -86,11 +86,8 @@ export default function MainLayout({
     queryKey: ['/api/admin/check', user?.id],
     queryFn: async () => {
       if (!user?.id) return { isAdmin: false };
-      // Передаем userId в query параметре
-      const response = await fetch(`/api/admin/check?userId=${user.id}`, {
-        credentials: 'include',
-      });
-      if (!response.ok) return { isAdmin: false };
+      const emailParam = user.email ? `&email=${encodeURIComponent(user.email)}` : "";
+      const response = await apiRequest("GET", `/api/admin/check?userId=${user.id}${emailParam}`);
       return response.json();
     },
     enabled: !!user?.id,

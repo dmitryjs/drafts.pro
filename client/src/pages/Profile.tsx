@@ -252,6 +252,15 @@ export default function Profile() {
 
   const draftsCount = drafts?.length || 0;
 
+  const updateAvatar = (nextAvatar: string | null) => {
+    setAvatarUrl(nextAvatar);
+    if (!profileData?.id) {
+      toast({ title: "Профиль ещё загружается", variant: "destructive" });
+      return;
+    }
+    saveProfileMutation.mutate({ avatarUrl: nextAvatar } as any);
+  };
+
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -260,7 +269,7 @@ export default function Profile() {
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => setAvatarUrl(reader.result as string);
+      reader.onloadend = () => updateAvatar(reader.result as string);
       reader.onerror = () => toast({ title: "Ошибка при чтении файла", variant: "destructive" });
       reader.readAsDataURL(file);
     }
@@ -421,7 +430,7 @@ export default function Profile() {
                           <RefreshCw className="h-4 w-4 mr-2" />
                           Заменить
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setAvatarUrl(null)} className="text-destructive">
+                        <DropdownMenuItem onClick={() => updateAvatar(null)} className="text-destructive">
                           <Trash2 className="h-4 w-4 mr-2" />
                           Удалить
                         </DropdownMenuItem>
