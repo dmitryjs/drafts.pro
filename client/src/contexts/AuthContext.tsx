@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, getAuthRedirectUrl, getRememberMePreference, isSupabaseConfigured, setRememberMePreference } from '@/lib/supabase';
 import { mapProfileRow } from "@/lib/supabase-helpers";
 
 interface Profile {
@@ -17,6 +17,8 @@ interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
   isConfigured: boolean;
+  rememberMe: boolean;
+  setRememberMe: (value: boolean) => void;
   signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -29,8 +31,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [rememberMe, setRememberMeState] = useState(getRememberMePreference());
 
   const isConfigured = isSupabaseConfigured();
+
+  useEffect(() => {
+    setRememberMePreference(rememberMe);
+  }, [rememberMe]);
+
+  useEffect(() => {
+    if (!supabase || rememberMe) {
+      return;
+    }
+
+    const clearSessionStorage = () => {
+      try {
+        if (supabase.auth?.storageKey && typeof window !== "undefined") {
+          window.localStorage.removeItem(supabase.auth.storageKey);
+        }
+      } catch (error) {
+        console.warn("Failed to clear auth storage:", error);
+      }
+    };
+
+    window.addEventListener("beforeunload", clearSessionStorage);
+    window.addEventListener("pagehide", clearSessionStorage);
+
+    return () => {
+      window.removeEventListener("beforeunload", clearSessionStorage);
+      window.removeEventListener("pagehide", clearSessionStorage);
+    };
+  }, [rememberMe]);
 
   useEffect(() => {
     if (!supabase) {
@@ -110,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       options: {
         shouldCreateUser: true,
+        emailRedirectTo: getAuthRedirectUrl(),
       },
     });
     return { error: error as Error | null };
@@ -140,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         isLoading,
         isConfigured,
+        rememberMe,
+        setRememberMe: setRememberMeState,
         signInWithOtp,
         verifyOtp,
         signOut,

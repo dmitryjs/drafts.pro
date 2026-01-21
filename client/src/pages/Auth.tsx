@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Eye, EyeOff, Mail, Lock } from "lucide-react";
@@ -12,7 +13,7 @@ import logoWhite from "@assets/Logo White.svg";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
-  const { user, isLoading, signInWithOtp, verifyOtp, isConfigured } = useSupabaseAuth();
+  const { user, isLoading, signInWithOtp, verifyOtp, isConfigured, rememberMe, setRememberMe } = useSupabaseAuth();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -164,6 +165,17 @@ export default function Auth() {
                     data-testid="input-email"
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(value) => setRememberMe(Boolean(value))}
+                />
+                <Label htmlFor="remember-me" className="text-xs sm:text-sm">
+                  Запомнить меня
+                </Label>
               </div>
 
               {otpSent && (
