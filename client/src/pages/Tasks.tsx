@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -247,6 +247,16 @@ export default function Tasks() {
   const { data: apiTasks, isLoading, isError } = useTasks({
     category: selectedCategory !== "all" ? selectedCategory : undefined,
   });
+  const [showFallback, setShowFallback] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setShowFallback(false);
+      return;
+    }
+    const timeoutId = window.setTimeout(() => setShowFallback(true), 6000);
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoading]);
 
   const voteMutation = useMutation({
     mutationFn: async ({ taskId, value }: { taskId: number; value: 1 | -1 }) => {
@@ -288,7 +298,7 @@ export default function Tasks() {
   };
 
   const tasks = apiTasks?.length ? apiTasks : mockTasks;
-  const isLoadingTasks = isLoading && !isError;
+  const isLoadingTasks = isLoading && !isError && !showFallback;
 
   let filteredTasks = tasks.filter((task: any) => {
     if (selectedCategory !== "all" && task.category !== selectedCategory) return false;
@@ -362,7 +372,7 @@ export default function Tasks() {
               className={cn(
                 "h-11 lg:h-auto lg:px-4 lg:py-2 px-4 py-3 rounded-full text-sm lg:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-2",
                 isActive 
-                  ? "bg-[#E8E8E8] text-[#1D1D1F]"
+                  ? "bg-[#141416] text-white"
                   : "bg-[#E8E8E8] text-[#1D1D1F] hover:bg-[#DCDCE4]"
               )}
               data-testid={`filter-category-${cat.id}`}

@@ -58,7 +58,7 @@ export default function CreateBattleModal({ open, onOpenChange }: CreateBattleMo
         throw new Error("Необходима авторизация");
       }
 
-      const profileId = await getProfileIdByAuthUid(user.id);
+      const profileId = await getProfileIdByAuthUid(user.id, user.email);
       if (!profileId) {
         throw new Error("Профиль не найден");
       }

@@ -801,7 +801,8 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
 
           <div className="flex items-center gap-3">
             <Button 
-              variant="outline" 
+              variant="secondary"
+              className="bg-[#E8E8E8] text-[#1D1D1F] hover:bg-[#D7D7D7]"
               onClick={handleSaveDraft}
               data-testid="button-save-draft"
             >
@@ -809,6 +810,7 @@ export default function CreateTaskModal({ open, onOpenChange }: CreateTaskModalP
             </Button>
             <Button 
               onClick={handleSubmit}
+              className="bg-[#E8E8E8] text-[#1D1D1F] hover:bg-[#D7D7D7]"
               disabled={!title || !category || !level}
               data-testid="button-create-task"
             >

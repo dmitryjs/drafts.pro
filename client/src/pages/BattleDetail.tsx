@@ -249,7 +249,7 @@ export default function BattleDetail() {
     queryFn: async () => {
       if (!user?.id) return { hasVoted: false };
 
-      const userId = await getUserIdByAuthUid(user.id);
+      const userId = await getUserIdByAuthUid(user.id, user.email);
       if (!userId) return { hasVoted: false };
 
       const { data, error } = await supabase
@@ -275,7 +275,7 @@ export default function BattleDetail() {
         throw new Error("Необходима авторизация");
       }
 
-      const profileId = await getProfileIdByAuthUid(user.id);
+      const profileId = await getProfileIdByAuthUid(user.id, user.email);
       if (!profileId) {
         throw new Error("Профиль не найден");
       }
@@ -311,7 +311,7 @@ export default function BattleDetail() {
         throw new Error("Необходима авторизация");
       }
 
-      const profileId = await getProfileIdByAuthUid(user.id);
+      const profileId = await getProfileIdByAuthUid(user.id, user.email);
       if (!profileId) {
         throw new Error("Профиль не найден");
       }
@@ -384,7 +384,7 @@ export default function BattleDetail() {
         throw new Error("Необходима авторизация");
       }
 
-      const userId = await getUserIdByAuthUid(user.id);
+      const userId = await getUserIdByAuthUid(user.id, user.email);
       if (!userId) {
         throw new Error("Пользователь не найден");
       }

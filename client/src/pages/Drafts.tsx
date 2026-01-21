@@ -34,7 +34,7 @@ export default function Drafts() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const profileId = await getProfileIdByAuthUid(user.id);
+      const profileId = await getProfileIdByAuthUid(user.id, user.email);
       if (!profileId) return [];
 
       const { data, error } = await supabase
@@ -56,7 +56,7 @@ export default function Drafts() {
         throw new Error("Необходима авторизация");
       }
 
-      const profileId = await getProfileIdByAuthUid(user.id);
+      const profileId = await getProfileIdByAuthUid(user.id, user.email);
       if (!profileId) {
         throw new Error("Профиль не найден");
       }
@@ -91,7 +91,7 @@ export default function Drafts() {
         throw new Error("Необходима авторизация");
       }
 
-      const authorId = await getUserIdByAuthUid(user.id);
+      const authorId = await getUserIdByAuthUid(user.id, user.email);
       if (!authorId) {
         throw new Error("Пользователь не найден");
       }
@@ -127,7 +127,7 @@ export default function Drafts() {
     },
     onSuccess: async (_, draft) => {
       if (user?.id) {
-        const profileId = await getProfileIdByAuthUid(user.id);
+        const profileId = await getProfileIdByAuthUid(user.id, user.email);
         if (profileId) {
           await supabase
             .from("task_drafts")
